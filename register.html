@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация аккаунта</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #030816;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: #333;
+        }
+
+        .card {
+            background-color: #ffffff;
+            width: 100%;
+            max-width: 420px; 
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #000080;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4); 
+            position: relative;
+            z-index: 1;
+        }
+
+        .card h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            font-weight: 600;
+            color: #000080;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 13px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+            background-color: #f9f9f9;
+        }
+
+        .input-group input:focus {
+            border-color: #000080;
+            background-color: #fff;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: #000080;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+            margin-top: 15px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            background-color: #0000aa;
+        }
+
+        #resultWindow {
+            display: none;
+        }
+
+        .result-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #000080;
+        }
+
+        .result-item span {
+            font-weight: bold;
+            word-break: break-all;
+            color: #2c3e50;
+        }
+
+        #statusMessage {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #ff0000; 
+            min-height: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card" id="formCard">
+        <h2>Создать ак</h2>
+        <form id="regForm">
+            <div class="input-group">
+                <label>Логін</label>
+                <input type="text" id="login"  required>
+            </div>
+
+            <div class="input-group">
+                <label>Пошта</label>
+                <input type="email" id="email"  required>
+            </div>
+
+            <div class="input-group">
+                <label>Ім'я</label>
+                <input type="text" id="fullname"  required>
+            </div>
+
+            <div class="input-group">
+                <label>Пароль</label>
+                <input type="password" id="password"  required>
+            </div>
+
+            <div class="input-group">
+                <label>Підтвердження пароля</label>
+                <input type="password" id="confirm_password" required>
+            </div>
+
+            <button type="submit">Зарегистрироваться</button>
+            <div id="statusMessage"></div>
+        </form>
+    </div>
+
+    <div class="card" id="resultWindow">
+        <h2>Аккаунт создан!</h2>
+        
+        <div class="result-item">
+            ID: <span id="userIdText"></span>
+        </div>
+        <div class="result-item">
+            Логин: <span id="loginText"></span>
+        </div>
+        <div class="result-item">
+            Почта: <span id="emailText"></span>
+        </div>
+        <div class="result-item">
+            Имя: <span id="nameText"></span>
+        </div>
+
+        <button onclick="location.reload()" style="margin-top: 20px;">Вернуться</button>
+    </div>
+
+    <script>
+        const ws = new WebSocket('ws://localhost:8080');
+        const statusMessage = document.getElementById('statusMessage');
+
+        ws.onopen = () => {
+            console.log("Соединение с сервером установлено.");
+        };
+
+        ws.onclose = () => {
+            statusMessage.innerText = "Связь с сервером потеряна.";
+        };
+
+        ws.onmessage = (event) => {
+            const response = JSON.parse(event.data);
+
+            if (response.type === "register_account") {
+                if (response.is_ok) {
+                    document.getElementById('formCard').style.display = "none";
+                    document.getElementById('resultWindow').style.display = "block";
+
+                    document.getElementById('userIdText').innerText = response.user.id;
+                    document.getElementById('loginText').innerText = response.user.login;
+                    document.getElementById('emailText').innerText = response.user.email;
+                    document.getElementById('nameText').innerText = response.user.full_name;
+                } else {
+                    statusMessage.innerText = response.error;
+                }
+            }
+        };
+
+        document.getElementById('regForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            if (ws.readyState !== WebSocket.OPEN) {
+                statusMessage.innerText = "Нет связи с сервером!";
+                return;
+            }
+
+            statusMessage.innerText = ""; 
+
+            const login = document.getElementById('login').value;
+            const email = document.getElementById('email').value;
+            const fullname = document.getElementById('fullname').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+
+            // Локальная проверка: совпадают ли пароли?
+            if (password !== confirmPassword) {
+                statusMessage.innerText = "Пароли не совпадают!";
+                return; // Останавливаем отправку, если пароли разные
+            }
+
+            const requestData = {
+                type: "register_account",
+                data: {
+                    login: login,
+                    email: email,
+                    full_name: fullname,
+                    password: password
+                }
+            };
+
+            ws.send(JSON.stringify(requestData));
+        });
+    </script>
+</body>
+</html>

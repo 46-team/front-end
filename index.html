@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Реєстрація акаунта</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="card" id="formCard">
+        <h2>Створити акаунт</h2>
+        <form id="regForm">
+            <div class="input-group">
+                <label>Логін</label>
+                <input type="text" id="login"  required>
+            </div>
+            <div class="input-group">
+                <label>Пошта</label>
+                <input type="email" id="email"  required>
+            </div>
+            <div class="input-group">
+                <label>Ім'я</label>
+                <input type="text" id="fullname"  required>
+            </div>
+            <div class="input-group">
+                <label>Пароль</label>
+                <input type="password" id="password"  required>
+            </div>
+            <div class="input-group">
+                <label>Підтвердження пароля</label>
+                <input type="password" id="confirm_password"  required>
+            </div>
+            <button type="submit">Зареєструватися</button>
+            <div id="statusMessage"></div>
+        </form>
+    </div>
+
+    <div class="card" id="resultWindow">
+        <h2>Акаунт створено!</h2>
+        <div class="result-item"><b>ID:</b> <span id="userIdText"></span></div>
+        <div class="result-item"><b>Логін:</b> <span id="loginText"></span></div>
+        <div class="result-item"><b>Пошта:</b> <span id="emailText"></span></div>
+        <div class="result-item"><b>Ім'я:</b> <span id="nameText"></span></div>
+        <button onclick="location.reload()" style="margin-top: 20px;">Повернутися</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

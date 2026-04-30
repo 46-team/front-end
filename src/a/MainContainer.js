@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Tournament from '../Tournament'; // Перевірте шлях до файлу
 import '../App.css';
-import TournamentDetails from './TournamentDetails';
+import TournamentDetails from '../components/TournamentDetails';
 
-export default function Dashboard () {
+export function Dashboard () {
     const user = JSON.parse(localStorage.getItem("usr_acc")) || {
         first_name: "Unknown",
         last_name: "User",

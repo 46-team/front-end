@@ -13,7 +13,7 @@ const queues = {};
 
 let serverKey = null;
 let keyPair = null;
-const url = "ws://localhost:8000/apiws"
+const url = "ws://192.168.0.204:8000/apiws"
 export let key = null;
 
 export function pushMessage(msg) {

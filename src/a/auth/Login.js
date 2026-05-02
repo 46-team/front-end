@@ -27,7 +27,7 @@ export default function Login({setPage}) {
         } else {
             sendWS({
                 "type": "auth",
-                "login": login,
+                "email": login,
                 "password": password
             })
         }

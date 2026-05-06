@@ -33,7 +33,7 @@ export default function App_a() {
     useEffect(() => {
         if (status !== "connected") return
         if (localStorage.getItem("usr_acc") && localStorage.getItem("device_token")) {
-            setPage("auth")
+            setPage("main")
 
         } else {
             setPage("auth")

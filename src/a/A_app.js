@@ -1,5 +1,5 @@
 import {useEffect, useState} from "react"
-import {connectWebSocket, sendWS, subscribeWS} from "../utils/Websocket"
+import {connectWebSocket} from "../utils/Websocket"
 import ServerError from "../system-pages/ServerError"
 import Loader from "../utils/Loaders"
 import Login from "./auth/Login";

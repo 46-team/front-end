@@ -3,10 +3,9 @@ import { Box, Card, CardContent, Typography, TextField, Button, useMediaQuery } 
 import { useTheme } from '@mui/material/styles';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import Footer from "../../components/Footer";
-import Swal from 'sweetalert2';
 import {showError} from "../../utils/Modal";
-import {sendWS, subscribeWS} from "../../utils/Websocket";
 import { motion } from 'framer-motion';
+import {requestWS} from "../../api/wsClient";
 
 export default function Login({setPage}) {
     localStorage.clear();
@@ -21,29 +20,26 @@ export default function Login({setPage}) {
         return () => document.removeEventListener('contextmenu', disableContextMenu);
     }, []);
 
-    function handleLogin(e) {
+    async function handleLogin() {
         if (!login || !password) {
             showError("Error", "Some required data for authorization is missing.")
         } else {
-            sendWS({
-                "type": "auth",
-                "email": login,
-                "password": password
-            })
+            try {
+                const payload = await requestWS("auth", {
+                    "email": login,
+                    "password": password
+                }, {
+                    auth: false
+                });
+
+                localStorage.setItem("usr_acc", JSON.stringify(payload.user));
+                localStorage.setItem("device_token", payload.token);
+                setPage("main");
+            } catch (error) {
+                showError('Error', error.message);
+            }
         }
     }
-
-    subscribeWS("auth", (payload) => {
-        localStorage.setItem("usr_acc", JSON.stringify(payload.user));
-        localStorage.setItem("device_token", payload.token);
-        setPage("main");
-    })
-
-    subscribeWS("null", (payload) => {
-        if (!payload.is_ok) {
-            showError('Error',payload['error']);
-        }
-    });
 
     const cardVariants = {
         hidden: { opacity: 0, y: 50 },
@@ -153,7 +149,7 @@ Login                                </Typography>
                                         textTransform: 'none',
                                         borderRadius: 2,
                                     }}
-                                    onClick={(e) => {handleLogin(e)}}
+                                    onClick={() => {handleLogin()}}
                                 >
                                     Sign in
                                 </Button>

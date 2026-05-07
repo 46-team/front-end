@@ -4,12 +4,25 @@ import ServerError from "../system-pages/ServerError"
 import Loader from "../utils/Loaders"
 import Login from "./auth/Login";
 import MainContainer from "./MainContainer";
+import {requestWS} from "../api/wsClient";
 
 let timeout = null;
 
 export default function App_a() {
     const [status, setStatus] = useState("connecting")
     const [page, setPage] = useState("loading")
+
+    async function handleLogout() {
+        try {
+            await requestWS("logout");
+        } catch (error) {
+            console.warn("Logout request failed", error);
+        } finally {
+            localStorage.removeItem("usr_acc");
+            localStorage.removeItem("device_token");
+            setPage("auth");
+        }
+    }
 
     useEffect(() => {
         let inttimeout = null;
@@ -54,7 +67,7 @@ export default function App_a() {
         return <ServerError/>
     }
     if (page === "main") {
-        return <MainContainer setPage={setPage} />
+        return <MainContainer onLogout={handleLogout} />
     }
     if (page === "loading") {
         return (

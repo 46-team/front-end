@@ -1,5 +1,5 @@
 import {useEffect, useState} from "react"
-import {connectWebSocket, sendWS, subscribeWS} from "../utils/Websocket"
+import {connectWebSocket} from "../utils/Websocket"
 import ServerError from "../system-pages/ServerError"
 import Loader from "../utils/Loaders"
 import Login from "./auth/Login";
@@ -33,7 +33,7 @@ export default function App_a() {
     useEffect(() => {
         if (status !== "connected") return
         if (localStorage.getItem("usr_acc") && localStorage.getItem("device_token")) {
-            setPage("auth")
+            setPage("main")
 
         } else {
             setPage("auth")

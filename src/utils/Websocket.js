@@ -11,9 +11,8 @@ const sendQueue = []
 const listeners = {};
 const queues = {};
 
-let serverKey = null;
 let keyPair = null;
-const url = "ws://localhost:8000/apiws"
+const url = process.env.REACT_APP_WS_URL || "ws://localhost:8000/apiws"
 export let key = null;
 
 export function pushMessage(msg) {
@@ -116,11 +115,11 @@ export async function sendWS(data) {
         sendQueue.push(data)
         return
     }
-if (key !== null) {
-    await socket.send(await encrypt(JSON.stringify(data), key))
-} else {
-    await socket.send(JSON.stringify(data))
-}
+    if (key !== null) {
+        await socket.send(await encrypt(JSON.stringify(data), key))
+    } else {
+        await socket.send(JSON.stringify(data))
+    }
 }
 export function subscribeWS(type, callback) {
     if (!listeners[type]) {

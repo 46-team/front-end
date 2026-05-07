@@ -4,12 +4,25 @@ import ServerError from "../system-pages/ServerError"
 import Loader from "../utils/Loaders"
 import Login from "./auth/Login";
 import MainContainer from "./MainContainer";
+import {requestWS} from "../api/wsClient";
+import {clearAuthData, clearStoredUser, getDeviceToken, storeUser} from "./auth/authStorage";
 
 let timeout = null;
 
 export default function App_a() {
     const [status, setStatus] = useState("connecting")
     const [page, setPage] = useState("loading")
+
+    async function handleLogout() {
+        try {
+            await requestWS("logout");
+        } catch (error) {
+            console.warn("Logout request failed", error);
+        } finally {
+            clearAuthData();
+            setPage("auth");
+        }
+    }
 
     useEffect(() => {
         let inttimeout = null;
@@ -32,12 +45,27 @@ export default function App_a() {
 
     useEffect(() => {
         if (status !== "connected") return
-        if (localStorage.getItem("usr_acc") && localStorage.getItem("device_token")) {
-            setPage("main")
 
-        } else {
-            setPage("auth")
+        async function bootstrapSession() {
+            if (!getDeviceToken()) {
+                clearStoredUser();
+                setPage("auth");
+                return;
+            }
+
+            setPage("loading");
+
+            try {
+                const payload = await requestWS("get_me");
+                storeUser(payload.user);
+                setPage("main");
+            } catch (error) {
+                clearAuthData();
+                setPage("auth");
+            }
         }
+
+        bootstrapSession();
     }, [status]);
 
     useEffect(() => {
@@ -54,7 +82,7 @@ export default function App_a() {
         return <ServerError/>
     }
     if (page === "main") {
-        return <MainContainer setPage={setPage} />
+        return <MainContainer onLogout={handleLogout} />
     }
     if (page === "loading") {
         return (

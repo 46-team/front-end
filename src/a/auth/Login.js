@@ -7,6 +7,7 @@ import Footer from "../../components/Footer";
 import {showError} from "../../utils/Modal";
 import { motion } from 'framer-motion';
 import {requestWS} from "../../api/wsClient";
+import {storeAuthData} from "./authStorage";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -94,8 +95,7 @@ export default function Login({setPage}) {
     }
 
     function handleAuthSuccess(payload) {
-        localStorage.setItem("usr_acc", JSON.stringify(payload.user));
-        localStorage.setItem("device_token", payload.token);
+        storeAuthData(payload.user, payload.token);
         setPage("main");
     }
 

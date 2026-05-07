@@ -11,6 +11,16 @@ export function getDeviceToken() {
     return localStorage.getItem("device_token");
 }
 
+export function getStoredUser() {
+    try {
+        const storedUser = localStorage.getItem("usr_acc");
+        return storedUser ? JSON.parse(storedUser) : null;
+    } catch (error) {
+        clearStoredUser();
+        return null;
+    }
+}
+
 export function storeAuthData(user, token) {
     localStorage.setItem("usr_acc", JSON.stringify(user));
     localStorage.setItem("device_token", token);

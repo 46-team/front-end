@@ -5,6 +5,7 @@ import {getStoredUser} from "./auth/authStorage";
 import AuthenticatedLayout from "./layout/AuthenticatedLayout";
 import {getNavigationForRole} from "./layout/appNavigation";
 import {normalizeUser} from "./layout/userUtils";
+import OrganizerTournamentCreation from "./organizer/OrganizerTournamentCreation";
 
 const PAGE_TITLES = {
     overview: "Overview",
@@ -77,8 +78,8 @@ function renderPage(activeItem, user) {
         return <WorkspacePanel title="Judging workspace" subtitle="Assigned judging activity will appear here." />;
     }
 
-    if (activeItem === "organizer") {
-        return <WorkspacePanel title="Organizer workspace" subtitle="Tournament setup activity will appear here." />;
+    if (activeItem === "organizer" && user.role === "organizer") {
+        return <OrganizerTournamentCreation/>;
     }
 
     if (activeItem === "tournaments") {

@@ -1,7 +1,8 @@
-import {useCallback, useEffect, useState} from "react";
+import {useCallback, useEffect, useMemo, useState} from "react";
 import {useNavigate, useParams} from "react-router-dom";
 import {
     Alert,
+    Autocomplete,
     Box,
     Button,
     Chip,
@@ -9,13 +10,33 @@ import {
     Divider,
     Paper,
     Stack,
+    TextField,
     Typography,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import GroupsIcon from "@mui/icons-material/Groups";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import SaveIcon from "@mui/icons-material/Save";
+import SearchIcon from "@mui/icons-material/Search";
 import {requestWS} from "../../api/wsClient";
 import {formatDate, formatDateTime, getTournamentErrorMessage, isAuthError} from "./tournamentFormatters";
+
+const ASSIGNMENT_ERROR_MESSAGES = {
+    "Authentication required": "Please sign in again.",
+    "Invalid token": "Please sign in again.",
+    "Access denied": "Only the tournament organizer can assign participants.",
+    "Required data is missing": "Tournament and participant selection are required.",
+    "Invalid tournament_id": "Invalid tournament id.",
+    "Tournament not found": "Tournament was not found.",
+    "Invalid participant_ids": "Participant selection is invalid.",
+    "Invalid user_id": "One selected user has an invalid id.",
+    "User not found": "One selected user was not found.",
+};
+
+function getAssignmentErrorMessage(error) {
+    const rawMessage = error?.message || error?.raw?.error || "Request failed. Please try again.";
+    return ASSIGNMENT_ERROR_MESSAGES[rawMessage] || rawMessage;
+}
 
 function DetailRow({label, value}) {
     return (
@@ -51,7 +72,215 @@ function ParticipantName({participant}) {
     );
 }
 
-export default function TournamentDetailView({tournamentId: tournamentIdProp, onAuthError}) {
+function getUserLabel(user) {
+    return user.full_name || user.login || user.email || user._id || "Unnamed user";
+}
+
+function mergeUsers(...userLists) {
+    const usersById = new Map();
+
+    userLists.flat().forEach(user => {
+        if (user?._id && !usersById.has(user._id)) {
+            usersById.set(user._id, user);
+        }
+    });
+
+    return Array.from(usersById.values());
+}
+
+function TournamentParticipantAssignment({tournament, onAssigned, onAuthError}) {
+    const assignedParticipants = useMemo(() => {
+        return Array.isArray(tournament.participants) ? tournament.participants : [];
+    }, [tournament.participants]);
+    const [query, setQuery] = useState("");
+    const [candidateUsers, setCandidateUsers] = useState([]);
+    const [selectedUsers, setSelectedUsers] = useState(assignedParticipants);
+    const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+
+    const options = mergeUsers(selectedUsers, assignedParticipants, candidateUsers);
+
+    const loadCandidateUsers = useCallback(async (searchText = "") => {
+        try {
+            setIsLoadingUsers(true);
+            setError("");
+
+            const payload = await requestWS("search_users", {
+                purpose: "tournament_participants",
+                query: searchText.trim(),
+                limit: 50,
+            });
+
+            setCandidateUsers(Array.isArray(payload.users) ? payload.users : []);
+        } catch (loadError) {
+            const message = getAssignmentErrorMessage(loadError);
+            setError(message);
+
+            if (isAuthError(loadError)) {
+                onAuthError?.();
+            }
+        } finally {
+            setIsLoadingUsers(false);
+        }
+    }, [onAuthError]);
+
+    useEffect(() => {
+        setSelectedUsers(assignedParticipants);
+    }, [tournament._id, assignedParticipants]);
+
+    useEffect(() => {
+        loadCandidateUsers("");
+    }, [loadCandidateUsers]);
+
+    function handleSearchSubmit(event) {
+        event.preventDefault();
+        loadCandidateUsers(query);
+    }
+
+    async function handleSubmit(event) {
+        event.preventDefault();
+
+        const participantIds = selectedUsers.map(user => user._id).filter(Boolean);
+
+        try {
+            setIsSubmitting(true);
+            setError("");
+            setSuccess("");
+
+            await requestWS("assign_tournament_participants", {
+                tournament_id: tournament._id,
+                participant_ids: participantIds,
+            });
+
+            await onAssigned?.();
+            setSuccess("Participants assigned successfully.");
+        } catch (assignError) {
+            const message = getAssignmentErrorMessage(assignError);
+            setError(message);
+
+            if (isAuthError(assignError)) {
+                onAuthError?.();
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
+
+    return (
+        <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
+            <Stack spacing={2} component="form" onSubmit={handleSubmit}>
+                <Box>
+                    <Typography variant="h6" component="h2" sx={{fontWeight: 800}}>
+                        Assign participants
+                    </Typography>
+                    <Typography variant="body2" sx={{mt: 0.5, color: "text.secondary"}}>
+                        Search users and choose who should participate in this tournament.
+                    </Typography>
+                </Box>
+
+                {error && (
+                    <Alert severity="error" onClose={() => setError("")}>
+                        {error}
+                    </Alert>
+                )}
+
+                {success && (
+                    <Alert severity="success" onClose={() => setSuccess("")}>
+                        {success}
+                    </Alert>
+                )}
+
+                <Stack
+                    component="div"
+                    direction={{xs: "column", sm: "row"}}
+                    spacing={1}
+                >
+                    <TextField
+                        label="Search users"
+                        value={query}
+                        onChange={event => setQuery(event.target.value)}
+                        size="small"
+                        fullWidth
+                        autoComplete="off"
+                    />
+                    <Button
+                        type="button"
+                        variant="outlined"
+                        startIcon={isLoadingUsers ? <CircularProgress color="inherit" size={18}/> : <SearchIcon/>}
+                        disabled={isLoadingUsers}
+                        onClick={handleSearchSubmit}
+                        sx={{textTransform: "none", minWidth: 120}}
+                    >
+                        Search
+                    </Button>
+                </Stack>
+
+                <Autocomplete
+                    multiple
+                    disableCloseOnSelect
+                    options={options}
+                    value={selectedUsers}
+                    loading={isLoadingUsers}
+                    getOptionLabel={getUserLabel}
+                    isOptionEqualToValue={(option, value) => option._id === value._id}
+                    onChange={(event, nextUsers) => {
+                        setSelectedUsers(nextUsers);
+                        setSuccess("");
+                    }}
+                    renderOption={(props, option) => {
+                        const {key, ...optionProps} = props;
+
+                        return (
+                            <Box component="li" {...optionProps} key={key}>
+                                <Box sx={{minWidth: 0}}>
+                                    <Typography variant="body2" sx={{fontWeight: 700, wordBreak: "break-word"}}>
+                                        {getUserLabel(option)}
+                                    </Typography>
+                                    <Typography variant="caption" sx={{color: "text.secondary", wordBreak: "break-word"}}>
+                                        {option.email || "-"} | {option.role || "participant"}
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        );
+                    }}
+                    renderInput={(params) => (
+                        <TextField
+                            {...params}
+                            label="Participants"
+                            placeholder="Choose users"
+                            helperText={`${selectedUsers.length} selected`}
+                            InputProps={{
+                                ...params.InputProps,
+                                endAdornment: (
+                                    <>
+                                        {isLoadingUsers ? <CircularProgress color="inherit" size={18}/> : null}
+                                        {params.InputProps.endAdornment}
+                                    </>
+                                ),
+                            }}
+                        />
+                    )}
+                />
+
+                <Box>
+                    <Button
+                        type="submit"
+                        variant="contained"
+                        startIcon={isSubmitting ? <CircularProgress color="inherit" size={18}/> : <SaveIcon/>}
+                        disabled={isSubmitting}
+                        sx={{textTransform: "none", minWidth: 190}}
+                    >
+                        Save participants
+                    </Button>
+                </Box>
+            </Stack>
+        </Paper>
+    );
+}
+
+export default function TournamentDetailView({tournamentId: tournamentIdProp, currentUser, onAuthError}) {
     const {tournamentId: routeTournamentId} = useParams();
     const tournamentId = tournamentIdProp || routeTournamentId;
     const navigate = useNavigate();
@@ -130,6 +359,7 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, on
     }
 
     const participants = Array.isArray(tournament.participants) ? tournament.participants : [];
+    const canAssignParticipants = currentUser?.role === "organizer" && tournament.created_by === currentUser?._id;
 
     return (
         <Stack spacing={2}>
@@ -209,6 +439,14 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, on
                     )}
                 </Stack>
             </Paper>
+
+            {canAssignParticipants && (
+                <TournamentParticipantAssignment
+                    tournament={tournament}
+                    onAssigned={loadTournament}
+                    onAuthError={onAuthError}
+                />
+            )}
         </Stack>
     );
 }

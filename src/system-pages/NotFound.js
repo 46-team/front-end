@@ -57,7 +57,7 @@ export default function NotFound() {
                         <Typography sx={{ mt: 2, mb: 4, color: 'text.secondary' }}>
                             Unfortunately, there is no such page on our platform. You may have made a mistake in the link or the page has been moved.
                         </Typography>
-                        <Link to="/a">
+                        <Link to="/">
                             <Button
                                 variant="contained"
                                 sx={{

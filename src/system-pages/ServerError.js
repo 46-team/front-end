@@ -77,7 +77,7 @@ export default function ServerError() {
                             Try refreshing the page or coming back later.
                         </Typography>
 
-                        <Link to="/a" onClick={(event) => {
+                        <Link to="/" onClick={(event) => {
                             event.preventDefault();
                             window.location.reload();
                         }}>

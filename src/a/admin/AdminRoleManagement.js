@@ -127,16 +127,11 @@ export default function AdminRoleManagement({currentUser}) {
     }
 
     return (
-        <Box sx={{mt: 4}}>
+        <Box>
             <Stack spacing={2}>
-                <Box>
-                    <Typography variant="h5" component="h2" sx={{fontWeight: 700}}>
-                        Role management
-                    </Typography>
-                    <Typography variant="body2" sx={{color: "text.secondary", mt: 0.5}}>
-                        Search users and update their access role.
-                    </Typography>
-                </Box>
+                <Typography variant="body2" sx={{color: "text.secondary"}}>
+                    Search users and update their access role.
+                </Typography>
 
                 <Stack
                     component="form"

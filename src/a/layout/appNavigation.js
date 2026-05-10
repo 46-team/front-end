@@ -2,6 +2,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import GroupsIcon from "@mui/icons-material/Groups";
 import GavelIcon from "@mui/icons-material/Gavel";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import SettingsSuggestIcon from "@mui/icons-material/SettingsSuggest";
 
@@ -41,6 +42,12 @@ export const NAV_ITEMS = [
         label: "Roles",
         icon: ManageAccountsIcon,
         roles: ["admin"],
+    },
+    {
+        id: "about-project",
+        label: "About Project",
+        icon: InfoOutlinedIcon,
+        roles: ["admin", "team", "jury", "organizer"],
     },
 ];
 

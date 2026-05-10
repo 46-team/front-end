@@ -1,4 +1,5 @@
 import {useState} from "react";
+import {useNavigate} from "react-router-dom";
 import {
     Alert,
     Box,
@@ -11,6 +12,7 @@ import {
     Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import {requestWS} from "../../api/wsClient";
 import {getDeviceToken} from "../auth/authStorage";
 import {showError} from "../../utils/Modal";
@@ -52,6 +54,7 @@ function formatTournamentDate(value) {
 }
 
 export default function OrganizerTournamentCreation() {
+    const navigate = useNavigate();
     const [form, setForm] = useState(EMPTY_FORM);
     const [createdTournaments, setCreatedTournaments] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -200,17 +203,42 @@ export default function OrganizerTournamentCreation() {
                     </Typography>
                     <Stack divider={<Divider flexItem/>} spacing={2} sx={{mt: 2}}>
                         {createdTournaments.map(tournament => (
-                            <Box key={tournament._id || tournament.title}>
-                                <Typography sx={{fontWeight: 700}}>
-                                    {tournament.title}
-                                </Typography>
-                                <Typography variant="body2" sx={{color: "text.secondary"}}>
-                                    {tournament.status || "Draft"} | {formatTournamentDate(tournament.start_date)} - {formatTournamentDate(tournament.end_date)}
-                                </Typography>
-                                {tournament.description && (
-                                    <Typography variant="body2" sx={{mt: 0.75}}>
-                                        {tournament.description}
+                            <Box
+                                key={tournament._id || tournament.title}
+                                sx={{
+                                    display: "grid",
+                                    gridTemplateColumns: {xs: "1fr", sm: "1fr auto"},
+                                    gap: 1.5,
+                                    alignItems: "center",
+                                }}
+                            >
+                                <Box sx={{minWidth: 0}}>
+                                    <Typography sx={{fontWeight: 700, wordBreak: "break-word"}}>
+                                        {tournament.title}
                                     </Typography>
+                                    <Typography variant="body2" sx={{color: "text.secondary"}}>
+                                        {tournament.status || "Draft"} | {formatTournamentDate(tournament.start_date)} - {formatTournamentDate(tournament.end_date)}
+                                    </Typography>
+                                    {tournament.description && (
+                                        <Typography variant="body2" sx={{mt: 0.75, wordBreak: "break-word"}}>
+                                            {tournament.description}
+                                        </Typography>
+                                    )}
+                                </Box>
+                                {tournament._id && (
+                                    <Button
+                                        type="button"
+                                        variant="outlined"
+                                        startIcon={<VisibilityIcon/>}
+                                        onClick={() => navigate(`/tournaments/${tournament._id}`)}
+                                        sx={{
+                                            textTransform: "none",
+                                            justifySelf: {xs: "start", sm: "end"},
+                                            minWidth: 130,
+                                        }}
+                                    >
+                                        View details
+                                    </Button>
                                 )}
                             </Box>
                         ))}

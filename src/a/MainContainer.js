@@ -1,4 +1,5 @@
-import {useMemo, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
+import {matchPath, useLocation, useNavigate} from "react-router-dom";
 import {Box, Paper, Stack, Typography} from "@mui/material";
 import AdminRoleManagement from "./admin/AdminRoleManagement";
 import {getStoredUser} from "./auth/authStorage";
@@ -6,6 +7,7 @@ import AuthenticatedLayout from "./layout/AuthenticatedLayout";
 import {getNavigationForRole} from "./layout/appNavigation";
 import {normalizeUser} from "./layout/userUtils";
 import OrganizerTournamentCreation from "./organizer/OrganizerTournamentCreation";
+import TournamentDetailView from "./tournaments/TournamentDetailView";
 
 const PAGE_TITLES = {
     overview: "Overview",
@@ -65,7 +67,7 @@ function Overview({user}) {
     );
 }
 
-function renderPage(activeItem, user) {
+function renderPage(activeItem, user, onAuthError, tournamentId) {
     if (activeItem === "role-management" && user.role === "admin") {
         return <AdminRoleManagement currentUser={user}/>;
     }
@@ -83,25 +85,53 @@ function renderPage(activeItem, user) {
     }
 
     if (activeItem === "tournaments") {
-        return <WorkspacePanel title="Tournaments" subtitle="Available tournaments will appear here." />;
+        if (tournamentId) {
+            return <TournamentDetailView tournamentId={tournamentId} currentUser={user} onAuthError={onAuthError}/>;
+        }
+
+        return <WorkspacePanel title="Available tournaments" subtitle="Available tournaments will appear here." />;
     }
 
     return <Overview user={user}/>;
 }
 
 export default function MainContainer({onLogout}) {
+    const navigate = useNavigate();
+    const location = useLocation();
     const user = normalizeUser(getStoredUser());
     const navigationItems = useMemo(() => getNavigationForRole(user.role), [user.role]);
     const firstItemId = navigationItems[0]?.id || "overview";
-    const [activeItem, setActiveItem] = useState(firstItemId);
+    const routeItem = location.pathname.startsWith("/tournaments") ? "tournaments" : null;
+    const tournamentMatch = matchPath("/tournaments/:tournamentId", location.pathname);
+    const tournamentId = tournamentMatch?.params?.tournamentId || "";
+    const [activeItem, setActiveItem] = useState(routeItem || firstItemId);
     const isAllowedItem = navigationItems.some(item => item.id === activeItem);
     const visibleItem = isAllowedItem ? activeItem : firstItemId;
+
+    useEffect(() => {
+        if (routeItem) {
+            setActiveItem(routeItem);
+        }
+    }, [routeItem]);
+
+    function handleNavigate(itemId) {
+        setActiveItem(itemId);
+
+        if (itemId === "tournaments") {
+            navigate("/tournaments");
+            return;
+        }
+
+        if (location.pathname !== "/") {
+            navigate("/");
+        }
+    }
 
     return (
         <AuthenticatedLayout
             user={user}
             activeItem={visibleItem}
-            onNavigate={setActiveItem}
+            onNavigate={handleNavigate}
             onLogout={onLogout}
         >
             <Stack spacing={3} sx={{maxWidth: 1120, mx: "auto"}}>
@@ -113,7 +143,7 @@ export default function MainContainer({onLogout}) {
                         {user.roleLabel}
                     </Typography>
                 </Box>
-                {renderPage(visibleItem, user)}
+                {renderPage(visibleItem, user, onLogout, tournamentId)}
             </Stack>
         </AuthenticatedLayout>
     );

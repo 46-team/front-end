@@ -8,6 +8,7 @@ import {
     Chip,
     CircularProgress,
     Divider,
+    MenuItem,
     Paper,
     Stack,
     TextField,
@@ -21,6 +22,8 @@ import SearchIcon from "@mui/icons-material/Search";
 import {requestWS} from "../../api/wsClient";
 import {formatDate, formatDateTime, getTournamentErrorMessage, isAuthError} from "./tournamentFormatters";
 
+const TOURNAMENT_STATUSES = ["Draft", "Registration", "Running", "Finished"];
+
 const ASSIGNMENT_ERROR_MESSAGES = {
     "Authentication required": "Please sign in again.",
     "Invalid token": "Please sign in again.",
@@ -33,9 +36,33 @@ const ASSIGNMENT_ERROR_MESSAGES = {
     "User not found": "One selected user was not found.",
 };
 
+const STATUS_ERROR_MESSAGES = {
+    "Authentication required": "Please sign in again.",
+    "Invalid token": "Please sign in again.",
+    "Access denied": "Only the tournament organizer can change the status.",
+    "Required data is missing": "Tournament and status are required.",
+    "Invalid tournament_id": "Invalid tournament id.",
+    "Invalid status": "Choose a valid tournament status.",
+    "Tournament not found": "Tournament was not found.",
+};
+
 function getAssignmentErrorMessage(error) {
     const rawMessage = error?.message || error?.raw?.error || "Request failed. Please try again.";
     return ASSIGNMENT_ERROR_MESSAGES[rawMessage] || rawMessage;
+}
+
+function getStatusErrorMessage(error) {
+    const code = String(error?.code || error?.raw?.err_code || "").replace(/^#/, "");
+    const rawMessage = error?.message || error?.raw?.error || "Status update failed. Please try again.";
+
+    if (code === "AUTH_TOKEN_EMPTY" || code === "INSECURE_CONNECTION") return "Please sign in again.";
+    if (code === "FORBIDDEN") return "Only the tournament organizer can change the status.";
+    if (code === "INCOMPLETE_REQUEST") return "Tournament and status are required.";
+    if (code === "INVALID_ID") return "Invalid tournament id.";
+    if (code === "INVALID_STATUS") return "Choose a valid tournament status.";
+    if (code === "NOT_FOUND") return "Tournament was not found.";
+
+    return STATUS_ERROR_MESSAGES[rawMessage] || rawMessage;
 }
 
 function DetailRow({label, value}) {
@@ -74,6 +101,25 @@ function ParticipantName({participant}) {
 
 function getUserLabel(user) {
     return user.full_name || user.login || user.email || user._id || "Unnamed user";
+}
+
+function getUserId(userOrId) {
+    return typeof userOrId === "object" && userOrId !== null ? userOrId._id : userOrId;
+}
+
+function getTournamentCreatorLabel(tournament, currentUser) {
+    const createdBy = tournament.created_by;
+    const creatorId = getUserId(createdBy);
+
+    if (createdBy && typeof createdBy === "object") {
+        return getUserLabel(createdBy);
+    }
+
+    if (creatorId && creatorId === currentUser?._id) {
+        return getUserLabel(currentUser);
+    }
+
+    return tournament.creator_name || tournament.created_by_name || "Unknown creator";
 }
 
 function mergeUsers(...userLists) {
@@ -287,6 +333,9 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
     const [tournament, setTournament] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
+    const [statusError, setStatusError] = useState("");
+    const [statusSuccess, setStatusSuccess] = useState("");
+    const [isStatusSubmitting, setIsStatusSubmitting] = useState(false);
 
     const loadTournament = useCallback(async () => {
         try {
@@ -314,6 +363,41 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
     useEffect(() => {
         loadTournament();
     }, [loadTournament]);
+
+    async function handleStatusChange(event) {
+        const nextStatus = event.target.value;
+
+        if (!tournament || nextStatus === (tournament.status || "Draft")) {
+            return;
+        }
+
+        try {
+            setIsStatusSubmitting(true);
+            setStatusError("");
+            setStatusSuccess("");
+
+            const payload = await requestWS("change_tournament_status", {
+                tournament_id: tournament._id,
+                status: nextStatus,
+            });
+
+            if (payload.tournament) {
+                setTournament(payload.tournament);
+            }
+
+            await loadTournament();
+            setStatusSuccess("Tournament status updated successfully.");
+        } catch (changeError) {
+            const message = getStatusErrorMessage(changeError);
+            setStatusError(message);
+
+            if (isAuthError(changeError)) {
+                onAuthError?.();
+            }
+        } finally {
+            setIsStatusSubmitting(false);
+        }
+    }
 
     if (isLoading) {
         return (
@@ -359,7 +443,10 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
     }
 
     const participants = Array.isArray(tournament.participants) ? tournament.participants : [];
-    const canAssignParticipants = currentUser?.role === "organizer" && tournament.created_by === currentUser?._id;
+    const creatorId = getUserId(tournament.created_by);
+    const canManageTournament = currentUser?.role === "organizer" && creatorId === currentUser?._id;
+    const currentStatus = tournament.status || "Draft";
+    const creatorLabel = getTournamentCreatorLabel(tournament, currentUser);
 
     return (
         <Stack spacing={2}>
@@ -378,7 +465,28 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
                             <Typography variant="h5" component="h2" sx={{fontWeight: 800, wordBreak: "break-word"}}>
                                 {tournament.title}
                             </Typography>
-                            <Chip label={tournament.status || "Draft"} size="small" sx={{borderRadius: 1}}/>
+                            {canManageTournament ? (
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <TextField
+                                        select
+                                        label="Status"
+                                        value={currentStatus}
+                                        onChange={handleStatusChange}
+                                        size="small"
+                                        disabled={isStatusSubmitting}
+                                        sx={{minWidth: 170}}
+                                    >
+                                        {TOURNAMENT_STATUSES.map(status => (
+                                            <MenuItem key={status} value={status}>
+                                                {status}
+                                            </MenuItem>
+                                        ))}
+                                    </TextField>
+                                    {isStatusSubmitting && <CircularProgress size={20}/>}
+                                </Stack>
+                            ) : (
+                                <Chip label={currentStatus} size="small" sx={{borderRadius: 1}}/>
+                            )}
                         </Stack>
                         {tournament.description && (
                             <Typography sx={{mt: 1, color: "text.secondary"}}>
@@ -387,12 +495,24 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
                         )}
                     </Box>
 
+                    {statusError && (
+                        <Alert severity="error" onClose={() => setStatusError("")}>
+                            {statusError}
+                        </Alert>
+                    )}
+
+                    {statusSuccess && (
+                        <Alert severity="success" onClose={() => setStatusSuccess("")}>
+                            {statusSuccess}
+                        </Alert>
+                    )}
+
                     <Divider/>
 
                     <Stack spacing={1.5}>
                         <DetailRow label="Start date" value={formatDate(tournament.start_date)}/>
                         <DetailRow label="End date" value={formatDate(tournament.end_date)}/>
-                        <DetailRow label="Creator" value={tournament.created_by}/>
+                        <DetailRow label="Creator" value={creatorLabel}/>
                         <DetailRow label="Created" value={formatDateTime(tournament.created_at)}/>
                     </Stack>
                 </Stack>
@@ -440,7 +560,7 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
                 </Stack>
             </Paper>
 
-            {canAssignParticipants && (
+            {canManageTournament && (
                 <TournamentParticipantAssignment
                     tournament={tournament}
                     onAssigned={loadTournament}

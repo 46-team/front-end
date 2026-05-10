@@ -3,7 +3,6 @@ import {
     Chip,
     Divider,
     Link,
-    Paper,
     Stack,
     Typography,
 } from "@mui/material";
@@ -11,6 +10,7 @@ import EmailIcon from "@mui/icons-material/Email";
 import GroupsIcon from "@mui/icons-material/Groups";
 import PhoneIcon from "@mui/icons-material/Phone";
 import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
+import AppSurface from "../../ui/AppSurface";
 
 const TEAM_MEMBERS = [
     {
@@ -68,17 +68,16 @@ function ContactLine({icon, label, href}) {
 
 function TeamMemberCard({member}) {
     return (
-        <Paper
+        <AppSurface
             variant="outlined"
             sx={{
                 p: {xs: 2, sm: 2.5},
-                borderRadius: 1,
                 height: "100%",
             }}
         >
             <Stack spacing={1.25} sx={{height: "100%"}}>
                 <Box sx={{minWidth: 0}}>
-                    <Typography variant="h6" component="h3" sx={{fontWeight: 800, wordBreak: "break-word"}}>
+                    <Typography variant="h6" component="h3" sx={{wordBreak: "break-word"}}>
                         {member.name}
                     </Typography>
                     <Typography variant="body2" sx={{mt: 0.5, color: "text.secondary", wordBreak: "break-word"}}>
@@ -105,14 +104,14 @@ function TeamMemberCard({member}) {
                     </Stack>
                 )}
             </Stack>
-        </Paper>
+        </AppSurface>
     );
 }
 
 export default function AboutProject() {
     return (
         <Stack spacing={3}>
-            <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
+            <AppSurface>
                 <Stack spacing={3}>
                     <Box
                         sx={{
@@ -123,9 +122,9 @@ export default function AboutProject() {
                         <Chip
                             icon={<WorkspacePremiumIcon/>}
                             label="Star for Life Ukraine competition"
-                            sx={{borderRadius: 1, mb: 2, maxWidth: "100%"}}
+                            sx={{mb: 2, maxWidth: "100%"}}
                         />
-                        <Typography variant="h5" component="h2" sx={{fontWeight: 800}}>
+                        <Typography variant="h5" component="h2">
                             About the project
                         </Typography>
                         <Typography sx={{mt: 1.25, color: "text.secondary", fontSize: "1rem"}}>
@@ -141,14 +140,14 @@ export default function AboutProject() {
                         </Typography>
                     </Box>
                 </Stack>
-            </Paper>
+            </AppSurface>
 
-            <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
+            <AppSurface>
                 <Stack spacing={2.5}>
                     <Box>
                         <Stack direction="row" spacing={1} alignItems="center">
                             <GroupsIcon color="primary"/>
-                            <Typography variant="h5" component="h2" sx={{fontWeight: 800}}>
+                            <Typography variant="h5" component="h2">
                                 Project team
                             </Typography>
                         </Stack>
@@ -174,7 +173,7 @@ export default function AboutProject() {
                         ))}
                     </Box>
                 </Stack>
-            </Paper>
+            </AppSurface>
         </Stack>
     );
 }

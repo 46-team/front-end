@@ -1,8 +1,9 @@
 import {Avatar, Box, Chip, Stack, Typography} from "@mui/material";
 import {getUserInitials, normalizeUser} from "./userUtils";
 
-export default function UserSummary({user, compact = false}) {
+export default function UserSummary({user, compact = false, inverse = false}) {
     const normalizedUser = normalizeUser(user);
+    const secondaryColor = inverse ? "rgba(255, 255, 255, 0.82)" : "text.secondary";
 
     return (
         <Stack
@@ -23,7 +24,7 @@ export default function UserSummary({user, compact = false}) {
                 </Typography>
                 <Typography
                     variant="caption"
-                    sx={{display: "block", color: "text.secondary", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}
+                    sx={{display: "block", color: secondaryColor, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}
                 >
                     {normalizedUser.secondaryText}
                 </Typography>
@@ -31,7 +32,7 @@ export default function UserSummary({user, compact = false}) {
                     <Chip
                         label={normalizedUser.roleLabel}
                         size="small"
-                        sx={{mt: 1, borderRadius: 1, fontWeight: 700}}
+                        sx={{mt: 1, fontWeight: 700}}
                     />
                 )}
             </Box>

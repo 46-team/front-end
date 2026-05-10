@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useState} from "react";
 import {matchPath, useLocation, useNavigate} from "react-router-dom";
-import {Box, Paper, Stack, Typography} from "@mui/material";
+import {Box, Stack, Typography} from "@mui/material";
 import AboutProject from "./about/AboutProject";
 import AdminRoleManagement from "./admin/AdminRoleManagement";
 import {getStoredUser} from "./auth/authStorage";
@@ -9,6 +9,7 @@ import {getNavigationForRole} from "./layout/appNavigation";
 import {normalizeUser} from "./layout/userUtils";
 import OrganizerTournamentCreation from "./organizer/OrganizerTournamentCreation";
 import TournamentDetailView from "./tournaments/TournamentDetailView";
+import AppSurface from "../ui/AppSurface";
 
 const PAGE_TITLES = {
     overview: "Overview",
@@ -22,14 +23,14 @@ const PAGE_TITLES = {
 
 function WorkspacePanel({title, subtitle}) {
     return (
-        <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
-            <Typography variant="h5" component="h2" sx={{fontWeight: 800}}>
+        <AppSurface>
+            <Typography variant="h5" component="h2">
                 {title}
             </Typography>
             <Typography sx={{mt: 1, color: "text.secondary"}}>
                 {subtitle}
             </Typography>
-        </Paper>
+        </AppSurface>
     );
 }
 
@@ -42,8 +43,8 @@ function Overview({user}) {
     ];
 
     return (
-        <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
-            <Typography variant="h5" component="h2" sx={{fontWeight: 800}}>
+        <AppSurface>
+            <Typography variant="h5" component="h2">
                 Account summary
             </Typography>
             <Stack spacing={1.5} sx={{mt: 2}}>
@@ -65,7 +66,7 @@ function Overview({user}) {
                     </Box>
                 ))}
             </Stack>
-        </Paper>
+        </AppSurface>
     );
 }
 
@@ -151,7 +152,7 @@ export default function MainContainer({onLogout}) {
         >
             <Stack spacing={3} sx={{maxWidth: 1120, mx: "auto"}}>
                 <Box>
-                    <Typography variant="h4" component="h1" sx={{fontWeight: 800}}>
+                    <Typography variant="h4" component="h1">
                         {PAGE_TITLES[visibleItem] || PAGE_TITLES.overview}
                     </Typography>
                     <Typography sx={{mt: 0.5, color: "text.secondary"}}>

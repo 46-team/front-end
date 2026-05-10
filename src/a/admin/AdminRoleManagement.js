@@ -152,7 +152,7 @@ export default function AdminRoleManagement({currentUser}) {
                         variant="contained"
                         startIcon={<SearchIcon/>}
                         disabled={isLoading}
-                        sx={{textTransform: "none", minWidth: 120}}
+                        sx={{minWidth: 120}}
                     >
                         Search
                     </Button>
@@ -162,7 +162,7 @@ export default function AdminRoleManagement({currentUser}) {
                         startIcon={<RefreshIcon/>}
                         disabled={isLoading}
                         onClick={() => loadUsers(query)}
-                        sx={{textTransform: "none", minWidth: 120}}
+                        sx={{minWidth: 120}}
                     >
                         Refresh
                     </Button>
@@ -174,7 +174,7 @@ export default function AdminRoleManagement({currentUser}) {
                     </Alert>
                 )}
 
-                <TableContainer component={Paper} sx={{borderRadius: 1}}>
+                <TableContainer component={Paper}>
                     <Table size="small">
                         <TableHead>
                             <TableRow>

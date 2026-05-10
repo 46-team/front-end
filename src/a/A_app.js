@@ -5,7 +5,8 @@ import Loader from "../utils/Loaders"
 import Login from "./auth/Login";
 import MainContainer from "./MainContainer";
 import {requestWS} from "../api/wsClient";
-import {clearAuthData, clearStoredUser, getDeviceToken, storeUser} from "./auth/authStorage";
+import {clearAuthData} from "./auth/authStorage";
+import {bootstrapStoredSession} from "./auth/sessionBootstrap";
 
 let timeout = null;
 
@@ -46,26 +47,7 @@ export default function App_a() {
     useEffect(() => {
         if (status !== "connected") return
 
-        async function bootstrapSession() {
-            if (!getDeviceToken()) {
-                clearStoredUser();
-                setPage("auth");
-                return;
-            }
-
-            setPage("loading");
-
-            try {
-                const payload = await requestWS("get_me");
-                storeUser(payload.user);
-                setPage("main");
-            } catch (error) {
-                clearAuthData();
-                setPage("auth");
-            }
-        }
-
-        bootstrapSession();
+        bootstrapStoredSession(setPage);
     }, [status]);
 
     useEffect(() => {

@@ -133,7 +133,7 @@ function getTournamentCreatorLabel(tournament, currentUser) {
         return getUserLabel(currentUser);
     }
 
-    return tournament.creator_name || tournament.created_by_name || "Admin";
+    return tournament.creator_name || tournament.created_by_name || "Tournament Organizer";
 }
 
 function mergeUsers(...userLists) {
@@ -683,7 +683,7 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
     const participants = Array.isArray(tournament.participants) ? tournament.participants : [];
     const creatorId = getUserId(tournament.created_by);
     const canManageStatus = currentUser?.role === "organizer" && creatorId === currentUser?._id;
-    const canManageParticipants = currentUser?.role === "admin" || canManageStatus;
+    const canManageParticipants = currentUser?.role === "Tournament Organizer" || canManageStatus;
     const currentStatus = tournament.status || "Draft";
     const creatorLabel = getTournamentCreatorLabel(tournament, currentUser);
 

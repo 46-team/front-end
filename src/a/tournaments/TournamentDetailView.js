@@ -46,6 +46,15 @@ const STATUS_ERROR_MESSAGES = {
     "Tournament not found": "Tournament was not found.",
 };
 
+const SUBMISSION_ERROR_MESSAGES = {
+    "Authentication required": "Please sign in again.",
+    "Invalid token": "Please sign in again.",
+    "Access denied": "You do not have permission to submit for this tournament.",
+    "Tournament not found": "Tournament was not found.",
+    "SubmissionClosed": "Submission is closed for this tournament.",
+    "Required data is missing": "Repository and demo video links are required.",
+};
+
 function getAssignmentErrorMessage(error) {
     const rawMessage = error?.message || error?.raw?.error || "Request failed. Please try again.";
     return ASSIGNMENT_ERROR_MESSAGES[rawMessage] || rawMessage;
@@ -63,6 +72,11 @@ function getStatusErrorMessage(error) {
     if (code === "NOT_FOUND") return "Tournament was not found.";
 
     return STATUS_ERROR_MESSAGES[rawMessage] || rawMessage;
+}
+
+function getSubmissionErrorMessage(error) {
+    const rawMessage = error?.message || error?.raw?.error || "Submission failed. Please try again.";
+    return SUBMISSION_ERROR_MESSAGES[rawMessage] || rawMessage;
 }
 
 function DetailRow({label, value}) {
@@ -119,7 +133,7 @@ function getTournamentCreatorLabel(tournament, currentUser) {
         return getUserLabel(currentUser);
     }
 
-    return tournament.creator_name || tournament.created_by_name || "Unknown creator";
+    return tournament.creator_name || tournament.created_by_name || "Admin";
 }
 
 function mergeUsers(...userLists) {
@@ -132,6 +146,230 @@ function mergeUsers(...userLists) {
     });
 
     return Array.from(usersById.values());
+}
+
+function getCurrentTeamSubmission(tournament, currentUser) {
+    if (tournament?.my_submission && typeof tournament.my_submission === "object") {
+        return tournament.my_submission;
+    }
+
+    if (Array.isArray(tournament?.submissions)) {
+        return tournament.submissions.find(submission => submission?.team_id === currentUser?._id) || null;
+    }
+
+    return null;
+}
+
+function getSubmissionDeadline(tournament) {
+    return tournament?.submission_deadline || tournament?.end_date || null;
+}
+
+function isSubmissionClosedForTournament(tournament) {
+    if (tournament?.submission_closed === true) {
+        return true;
+    }
+
+    const deadline = getSubmissionDeadline(tournament);
+    if (!deadline) {
+        return false;
+    }
+
+    const parsedDeadline = new Date(deadline);
+    if (Number.isNaN(parsedDeadline.getTime())) {
+        return false;
+    }
+
+    return Date.now() > parsedDeadline.getTime();
+}
+
+function normalizeTournamentStatus(status) {
+    return typeof status === "string" ? status.trim().toLowerCase() : "";
+}
+
+function canTeamSubmitForStatus(status) {
+    const normalizedStatus = normalizeTournamentStatus(status);
+
+    return normalizedStatus === "running" || normalizedStatus === "started" || normalizedStatus === "finished";
+}
+
+function TeamTournamentSubmission({tournament, currentUser, onReload, onAuthError}) {
+    const currentStatus = tournament.status || "Draft";
+    const isRegistered = Array.isArray(tournament.participants)
+        && tournament.participants.some(participant => participant?._id === currentUser?._id);
+    const currentSubmission = getCurrentTeamSubmission(tournament, currentUser);
+    const submissionClosed = isSubmissionClosedForTournament(tournament);
+    const canAccessSubmission = currentUser?.role === "team" && isRegistered && canTeamSubmitForStatus(currentStatus);
+    const [isFormOpen, setIsFormOpen] = useState(Boolean(currentSubmission));
+    const [form, setForm] = useState({
+        repositoryUrl: currentSubmission?.repository_url || "",
+        videoDemoUrl: currentSubmission?.video_demo_url || "",
+        liveDemoUrl: currentSubmission?.live_demo_url || "",
+        description: currentSubmission?.description || "",
+    });
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        setForm({
+            repositoryUrl: currentSubmission?.repository_url || "",
+            videoDemoUrl: currentSubmission?.video_demo_url || "",
+            liveDemoUrl: currentSubmission?.live_demo_url || "",
+            description: currentSubmission?.description || "",
+        });
+        setIsFormOpen(Boolean(currentSubmission));
+    }, [currentSubmission, tournament._id]);
+
+    if (!canAccessSubmission) {
+        return null;
+    }
+
+    function updateField(field, value) {
+        setForm(previous => ({
+            ...previous,
+            [field]: value,
+        }));
+    }
+
+    async function handleSubmit(event) {
+        event.preventDefault();
+
+        if (!form.repositoryUrl.trim() || !form.videoDemoUrl.trim()) {
+            setError("Repository and demo video links are required.");
+            setSuccess("");
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            setError("");
+            setSuccess("");
+
+            await requestWS("upsert_tournament_submission", {
+                tournament_id: tournament._id,
+                repository_url: form.repositoryUrl.trim(),
+                video_demo_url: form.videoDemoUrl.trim(),
+                live_demo_url: form.liveDemoUrl.trim() || null,
+                description: form.description.trim() || null,
+            });
+
+            await onReload?.();
+            setSuccess("Submission saved successfully.");
+        } catch (submitError) {
+            setError(getSubmissionErrorMessage(submitError));
+
+            if (isAuthError(submitError)) {
+                onAuthError?.();
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
+
+    return (
+        <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
+            <Stack spacing={2}>
+                <Box>
+                    <Typography variant="h6" component="h2" sx={{fontWeight: 800}}>
+                        Submission
+                    </Typography>
+                    <Typography variant="body2" sx={{mt: 0.5, color: "text.secondary"}}>
+                        Submit your GitHub repository and demo video after the tournament starts.
+                    </Typography>
+                </Box>
+
+                {submissionClosed ? (
+                    <Alert severity="warning">
+                        Submission is closed for this tournament.
+                    </Alert>
+                ) : (
+                    <Button
+                        variant={isFormOpen ? "outlined" : "contained"}
+                        onClick={() => setIsFormOpen(previous => !previous)}
+                        sx={{textTransform: "none", alignSelf: "flex-start"}}
+                    >
+                        {isFormOpen ? "Hide submission form" : (currentSubmission ? "Edit submission" : "Open submission form")}
+                    </Button>
+                )}
+
+                {currentSubmission && (
+                    <Stack spacing={1}>
+                        <DetailRow label="Repository" value={currentSubmission.repository_url}/>
+                        <DetailRow label="Video demo" value={currentSubmission.video_demo_url}/>
+                        <DetailRow label="Live demo" value={currentSubmission.live_demo_url}/>
+                        <DetailRow label="Submitted" value={formatDateTime(currentSubmission.updated_at || currentSubmission.created_at)}/>
+                    </Stack>
+                )}
+
+                {isFormOpen && !submissionClosed && (
+                    <Stack spacing={2} component="form" onSubmit={handleSubmit}>
+                        {error && (
+                            <Alert severity="error" onClose={() => setError("")}>
+                                {error}
+                            </Alert>
+                        )}
+
+                        {success && (
+                            <Alert severity="success" onClose={() => setSuccess("")}>
+                                {success}
+                            </Alert>
+                        )}
+
+                        <TextField
+                            label="GitHub repository"
+                            value={form.repositoryUrl}
+                            onChange={event => updateField("repositoryUrl", event.target.value)}
+                            fullWidth
+                            required
+                            autoComplete="off"
+                            placeholder="https://github.com/org/project"
+                        />
+                        <TextField
+                            label="Video demo"
+                            value={form.videoDemoUrl}
+                            onChange={event => updateField("videoDemoUrl", event.target.value)}
+                            fullWidth
+                            required
+                            autoComplete="off"
+                            placeholder="https://youtube.com/... or https://drive.google.com/..."
+                        />
+                        <TextField
+                            label="Live demo"
+                            value={form.liveDemoUrl}
+                            onChange={event => updateField("liveDemoUrl", event.target.value)}
+                            fullWidth
+                            autoComplete="off"
+                            placeholder="https://your-demo.example.com"
+                        />
+                        <TextField
+                            label="Short description"
+                            value={form.description}
+                            onChange={event => updateField("description", event.target.value)}
+                            fullWidth
+                            multiline
+                            minRows={4}
+                            placeholder="What was built and how to run it."
+                        />
+
+                        <Stack direction={{xs: "column", sm: "row"}} spacing={1.5} alignItems={{xs: "stretch", sm: "center"}}>
+                            <Button
+                                type="submit"
+                                variant="contained"
+                                startIcon={isSubmitting ? <CircularProgress color="inherit" size={18}/> : <SaveIcon/>}
+                                disabled={isSubmitting}
+                                sx={{textTransform: "none", minWidth: 180}}
+                            >
+                                {currentSubmission ? "Update submission" : "Submit project"}
+                            </Button>
+                            <Typography variant="body2" sx={{color: "text.secondary"}}>
+                                Required: GitHub repository and demo video link.
+                            </Typography>
+                        </Stack>
+                    </Stack>
+                )}
+            </Stack>
+        </Paper>
+    );
 }
 
 function TournamentParticipantAssignment({tournament, onAssigned, onAuthError}) {
@@ -444,7 +682,8 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
 
     const participants = Array.isArray(tournament.participants) ? tournament.participants : [];
     const creatorId = getUserId(tournament.created_by);
-    const canManageTournament = currentUser?.role === "organizer" && creatorId === currentUser?._id;
+    const canManageStatus = currentUser?.role === "organizer" && creatorId === currentUser?._id;
+    const canManageParticipants = currentUser?.role === "admin" || canManageStatus;
     const currentStatus = tournament.status || "Draft";
     const creatorLabel = getTournamentCreatorLabel(tournament, currentUser);
 
@@ -465,7 +704,7 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
                             <Typography variant="h5" component="h2" sx={{fontWeight: 800, wordBreak: "break-word"}}>
                                 {tournament.title}
                             </Typography>
-                            {canManageTournament ? (
+                            {canManageStatus ? (
                                 <Stack direction="row" spacing={1} alignItems="center">
                                     <TextField
                                         select
@@ -518,6 +757,13 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
                 </Stack>
             </Paper>
 
+            <TeamTournamentSubmission
+                tournament={tournament}
+                currentUser={currentUser}
+                onReload={loadTournament}
+                onAuthError={onAuthError}
+            />
+
             <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
                 <Stack spacing={2}>
                     <Stack direction="row" spacing={1} alignItems="center">
@@ -560,7 +806,7 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
                 </Stack>
             </Paper>
 
-            {canManageTournament && (
+            {canManageParticipants && (
                 <TournamentParticipantAssignment
                     tournament={tournament}
                     onAssigned={loadTournament}

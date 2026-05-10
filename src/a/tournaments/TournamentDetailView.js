@@ -103,6 +103,25 @@ function getUserLabel(user) {
     return user.full_name || user.login || user.email || user._id || "Unnamed user";
 }
 
+function getUserId(userOrId) {
+    return typeof userOrId === "object" && userOrId !== null ? userOrId._id : userOrId;
+}
+
+function getTournamentCreatorLabel(tournament, currentUser) {
+    const createdBy = tournament.created_by;
+    const creatorId = getUserId(createdBy);
+
+    if (createdBy && typeof createdBy === "object") {
+        return getUserLabel(createdBy);
+    }
+
+    if (creatorId && creatorId === currentUser?._id) {
+        return getUserLabel(currentUser);
+    }
+
+    return tournament.creator_name || tournament.created_by_name || "Unknown creator";
+}
+
 function mergeUsers(...userLists) {
     const usersById = new Map();
 
@@ -424,8 +443,10 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
     }
 
     const participants = Array.isArray(tournament.participants) ? tournament.participants : [];
-    const canManageTournament = currentUser?.role === "organizer" && tournament.created_by === currentUser?._id;
+    const creatorId = getUserId(tournament.created_by);
+    const canManageTournament = currentUser?.role === "organizer" && creatorId === currentUser?._id;
     const currentStatus = tournament.status || "Draft";
+    const creatorLabel = getTournamentCreatorLabel(tournament, currentUser);
 
     return (
         <Stack spacing={2}>
@@ -491,7 +512,7 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
                     <Stack spacing={1.5}>
                         <DetailRow label="Start date" value={formatDate(tournament.start_date)}/>
                         <DetailRow label="End date" value={formatDate(tournament.end_date)}/>
-                        <DetailRow label="Creator" value={tournament.created_by}/>
+                        <DetailRow label="Creator" value={creatorLabel}/>
                         <DetailRow label="Created" value={formatDateTime(tournament.created_at)}/>
                     </Stack>
                 </Stack>

@@ -21,6 +21,8 @@ const TEAM_MEMBERS = [
     {
         name: "Pavlo Postolnyi",
         role: "10-M grade student, team captain, project architect, team lead, frontend developer and cryptographic library developer",
+        phone: "+380686056774",
+        email: "pavelpostolnyi@fastgram.pp.ua",
     },
     {
         name: "Roman Medvedev",

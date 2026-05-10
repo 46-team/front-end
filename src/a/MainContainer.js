@@ -1,6 +1,7 @@
 import {useEffect, useMemo, useState} from "react";
 import {matchPath, useLocation, useNavigate} from "react-router-dom";
 import {Box, Button, Chip, Divider, Paper, Stack, Typography} from "@mui/material";
+import AboutProject from "./about/AboutProject";
 import AdminRoleManagement from "./admin/AdminRoleManagement";
 import {getStoredUser} from "./auth/authStorage";
 import AuthenticatedLayout from "./layout/AuthenticatedLayout";
@@ -17,6 +18,7 @@ const PAGE_TITLES = {
     judging: "Judging",
     organizer: "Organizer",
     "role-management": "Role management",
+    "about-project": "About Project",
 };
 
 function WorkspacePanel({title, subtitle}) {
@@ -281,6 +283,10 @@ function Overview({user}) {
 }
 
 function renderPage(activeItem, user, onAuthError, tournamentId, onOpenTournaments) {
+    if (activeItem === "about-project") {
+        return <AboutProject/>;
+    }
+
     if (activeItem === "role-management" && user.role === "admin") {
         return <AdminRoleManagement currentUser={user}/>;
     }
@@ -314,7 +320,11 @@ export default function MainContainer({onLogout}) {
     const user = normalizeUser(getStoredUser());
     const navigationItems = useMemo(() => getNavigationForRole(user.role), [user.role]);
     const firstItemId = navigationItems[0]?.id || "overview";
-    const routeItem = location.pathname.startsWith("/tournaments") ? "tournaments" : null;
+    const routeItem = location.pathname.startsWith("/tournaments")
+        ? "tournaments"
+        : location.pathname === "/about-project"
+            ? "about-project"
+            : null;
     const tournamentMatch = matchPath("/tournaments/:tournamentId", location.pathname);
     const tournamentId = tournamentMatch?.params?.tournamentId || "";
     const [activeItem, setActiveItem] = useState(routeItem || firstItemId);
@@ -332,6 +342,11 @@ export default function MainContainer({onLogout}) {
 
         if (itemId === "tournaments") {
             navigate("/tournaments");
+            return;
+        }
+
+        if (itemId === "about-project") {
+            navigate("/about-project");
             return;
         }
 

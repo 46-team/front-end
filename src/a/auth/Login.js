@@ -144,6 +144,7 @@ export default function Login({setPage}) {
     }
 
     const isRegister = mode === "register";
+    const loginFieldLabel = isRegister ? "Login" : "Login or email";
 
     return (
         <CenteredPage>
@@ -177,13 +178,13 @@ export default function Login({setPage}) {
                             </motion.div>
                             <motion.div custom={3} variants={staggeredItemVariants}>
                                 <Typography sx={{ mt: 1, mb: 3, color: 'text.secondary' }}>
-                                    {isRegister ? "Create your account" : "Enter your login details"}
+                                    {isRegister ? "Create your account" : "Enter your login or email"}
                                 </Typography>
                             </motion.div>
 
                             <motion.div custom={4} variants={staggeredItemVariants}>
                                 <TextField
-                                    label="Login"
+                                    label={loginFieldLabel}
                                     fullWidth
                                     autoComplete="off"
                                     sx={{ mb: 2 }}

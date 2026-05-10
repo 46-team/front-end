@@ -1,13 +1,14 @@
 import {useEffect, useState} from 'react';
-import { Box, Card, CardContent, Typography, TextField, Button, useMediaQuery, Stack } from '@mui/material';
+import { Card, CardContent, Typography, TextField, Button, useMediaQuery, Stack } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
-import Footer from "../../components/Footer";
 import {showError} from "../../utils/Modal";
 import { motion } from 'framer-motion';
 import {requestWS} from "../../api/wsClient";
 import {storeAuthData} from "./authStorage";
+import CenteredPage from "../../ui/CenteredPage";
+import {cardEntranceVariants, staggeredItemVariants} from "../../ui/animations";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -136,20 +137,6 @@ export default function Login({setPage}) {
         }
     }
 
-    const cardVariants = {
-        hidden: { opacity: 0, y: 50 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } }
-    };
-
-    const textVariants = {
-        hidden: { opacity: 0, y: 20 },
-        visible: (i = 1) => ({
-            opacity: 1,
-            y: 0,
-            transition: { delay: i * 0.2, duration: 0.2 }
-        })
-    };
-
     function handleKey(e) {
         if (e.key === 'Enter') {
             handleSubmit();
@@ -159,29 +146,11 @@ export default function Login({setPage}) {
     const isRegister = mode === "register";
 
     return (
-        <Box
-            sx={{
-                minHeight: '98vh',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                bgcolor: 'background.default',
-                overflow: 'hidden',
-            }}
-        >
-            <Box
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    flex: '1 0 auto',
-                    width: '100%',
-                }}
-            >
+        <CenteredPage>
                 <motion.div
                     initial="hidden"
                     animate="visible"
-                    variants={cardVariants}
+                    variants={cardEntranceVariants}
                     style={{ display: 'flex', justifyContent: 'center', width: '100%' }}
                 >
                     <Card
@@ -190,33 +159,31 @@ export default function Login({setPage}) {
                             width: '100%',
                             textAlign: 'center',
                             p: isMobile ? 2 : 4,
-                            borderRadius: 3,
                             boxShadow: 6,
                             mx: 2,
                         }}
                     >
                         <CardContent>
-                            <motion.div custom={1} variants={textVariants}>
+                            <motion.div custom={1} variants={staggeredItemVariants}>
                                 {isRegister
                                     ? <PersonAddAlt1Icon sx={{ fontSize: isMobile ? 54 : 72, color: 'primary.main' }} />
                                     : <LockOpenIcon sx={{ fontSize: isMobile ? 54 : 72, color: 'primary.main' }} />
                                 }
                             </motion.div>
-                            <motion.div custom={2} variants={textVariants}>
+                            <motion.div custom={2} variants={staggeredItemVariants}>
                                 <Typography variant={isMobile ? 'h4' : 'h3'} component="h1" sx={{ mt: 2, fontWeight: 'bold' }}>
                                     {isRegister ? "Register" : "Login"}
                                 </Typography>
                             </motion.div>
-                            <motion.div custom={3} variants={textVariants}>
+                            <motion.div custom={3} variants={staggeredItemVariants}>
                                 <Typography sx={{ mt: 1, mb: 3, color: 'text.secondary' }}>
                                     {isRegister ? "Create your account" : "Enter your login details"}
                                 </Typography>
                             </motion.div>
 
-                            <motion.div custom={4} variants={textVariants}>
+                            <motion.div custom={4} variants={staggeredItemVariants}>
                                 <TextField
                                     label="Login"
-                                    variant="outlined"
                                     fullWidth
                                     autoComplete="off"
                                     sx={{ mb: 2 }}
@@ -228,10 +195,9 @@ export default function Login({setPage}) {
                             </motion.div>
                             {isRegister && (
                                 <>
-                                    <motion.div custom={5} variants={textVariants}>
+                                    <motion.div custom={5} variants={staggeredItemVariants}>
                                         <TextField
                                             label="Full name"
-                                            variant="outlined"
                                             fullWidth
                                             autoComplete="name"
                                             sx={{ mb: 2 }}
@@ -240,11 +206,10 @@ export default function Login({setPage}) {
                                             onKeyDown={e => handleKey(e)}
                                         />
                                     </motion.div>
-                                    <motion.div custom={6} variants={textVariants}>
+                                    <motion.div custom={6} variants={staggeredItemVariants}>
                                         <TextField
                                             label="Email"
                                             type="email"
-                                            variant="outlined"
                                             fullWidth
                                             autoComplete="email"
                                             sx={{ mb: 2 }}
@@ -255,11 +220,10 @@ export default function Login({setPage}) {
                                     </motion.div>
                                 </>
                             )}
-                            <motion.div custom={isRegister ? 7 : 5} variants={textVariants}>
+                            <motion.div custom={isRegister ? 7 : 5} variants={staggeredItemVariants}>
                                 <TextField
                                     label="Password"
                                     type="password"
-                                    variant="outlined"
                                     autoComplete={isRegister ? "new-password" : "current-password"}
 
                                     fullWidth
@@ -270,11 +234,10 @@ export default function Login({setPage}) {
                                 />
                             </motion.div>
                             {isRegister && (
-                                <motion.div custom={8} variants={textVariants}>
+                                <motion.div custom={8} variants={staggeredItemVariants}>
                                     <TextField
                                         label="Confirm password"
                                         type="password"
-                                        variant="outlined"
                                         autoComplete="new-password"
                                         fullWidth
                                         sx={{ mb: 3 }}
@@ -285,7 +248,7 @@ export default function Login({setPage}) {
                                 </motion.div>
                             )}
 
-                            <motion.div custom={isRegister ? 9 : 6} variants={textVariants}>
+                            <motion.div custom={isRegister ? 9 : 6} variants={staggeredItemVariants}>
                                 <Button
                                     variant="contained"
                                     fullWidth
@@ -293,15 +256,13 @@ export default function Login({setPage}) {
                                     sx={{
                                         py: 1.5,
                                         fontSize: '1rem',
-                                        textTransform: 'none',
-                                        borderRadius: 2,
                                     }}
                                     onClick={() => {handleSubmit()}}
                                 >
                                     {isSubmitting ? "Please wait..." : isRegister ? "Create account" : "Sign in"}
                                 </Button>
                             </motion.div>
-                            <motion.div custom={isRegister ? 10 : 7} variants={textVariants}>
+                            <motion.div custom={isRegister ? 10 : 7} variants={staggeredItemVariants}>
                                 <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ mt: 2 }}>
                                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                                         {isRegister ? "Already have an account?" : "New here?"}
@@ -319,9 +280,6 @@ export default function Login({setPage}) {
                         </CardContent>
                     </Card>
                 </motion.div>
-            </Box>
-
-            <Footer/>
-        </Box>
+        </CenteredPage>
     );
 }

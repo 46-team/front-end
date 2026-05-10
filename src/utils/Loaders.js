@@ -1,14 +1,10 @@
 import React from "react";
 import CircularProgress from "@mui/material/CircularProgress";
-import { styled, keyframes } from "@mui/system";
-import Box from "@mui/material/Box";
+import { styled } from "@mui/system";
 import { Card, CardContent, Typography, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-
-const rotate = keyframes`
-  0% { transform: rotate(0deg);}
-  100% { transform: rotate(360deg);}
-`;
+import CenteredPage from "../ui/CenteredPage";
+import {rotate} from "../ui/animations";
 
 const Spinner = styled(CircularProgress)(() => ({
     color: "#00adef",
@@ -27,24 +23,13 @@ export default function Loader({ text = "Loading..." }) {
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
     return (
-        <Box
-            sx={{
-                minHeight: '98vh',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                bgcolor: 'background.default',
-                overflow: 'hidden',
-            }}
-        >
+        <CenteredPage footer={false}>
             <Card
                 sx={{
                     maxWidth: 400,
                     width: '100%',
                     textAlign: 'center',
                     p: isMobile ? 3 : 5,
-                    borderRadius: 3,
                     boxShadow: 6,
                     mx: 2,
                 }}
@@ -67,6 +52,6 @@ export default function Loader({ text = "Loading..." }) {
                     </Typography>
                 </CardContent>
             </Card>
-        </Box>
+        </CenteredPage>
     );
 }

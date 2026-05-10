@@ -86,10 +86,10 @@ function renderPage(activeItem, user, onAuthError, tournamentId) {
 
     if (activeItem === "tournaments") {
         if (tournamentId) {
-            return <TournamentDetailView tournamentId={tournamentId} onAuthError={onAuthError}/>;
+            return <TournamentDetailView tournamentId={tournamentId} currentUser={user} onAuthError={onAuthError}/>;
         }
 
-        return <WorkspacePanel title="Tournaments" subtitle="Available tournaments will appear here." />;
+        return <WorkspacePanel title="Available tournaments" subtitle="Available tournaments will appear here." />;
     }
 
     return <Overview user={user}/>;

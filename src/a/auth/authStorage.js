@@ -21,11 +21,26 @@ export function getStoredUser() {
     }
 }
 
+export function storeDeviceToken(token) {
+    if (!token) return;
+    localStorage.setItem("device_token", token);
+}
+
 export function storeAuthData(user, token) {
     localStorage.setItem("usr_acc", JSON.stringify(user));
-    localStorage.setItem("device_token", token);
+    storeDeviceToken(token);
 }
 
 export function storeUser(user) {
     localStorage.setItem("usr_acc", JSON.stringify(user));
+}
+
+export function storeSessionPayload(payload) {
+    if (payload?.user) {
+        storeUser(payload.user);
+    }
+
+    if (payload?.token) {
+        storeDeviceToken(payload.token);
+    }
 }

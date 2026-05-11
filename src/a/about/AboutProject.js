@@ -77,7 +77,7 @@ function TeamMemberCard({member}) {
         >
             <Stack spacing={1.25} sx={{height: "100%"}}>
                 <Box sx={{minWidth: 0}}>
-                    <Typography variant="h6" component="h3" sx={{wordBreak: "break-word"}}>
+                    <Typography variant="subtitle2" component="h3" sx={{wordBreak: "break-word"}}>
                         {member.name}
                     </Typography>
                     <Typography variant="body2" sx={{mt: 0.5, color: "text.secondary", wordBreak: "break-word"}}>
@@ -124,7 +124,7 @@ export default function AboutProject() {
                             label="Star for Life Ukraine competition"
                             sx={{mb: 2, maxWidth: "100%"}}
                         />
-                        <Typography variant="h5" component="h2">
+                        <Typography variant="subtitle1" component="h2">
                             About the project
                         </Typography>
                         <Typography sx={{mt: 1.25, color: "text.secondary", fontSize: "1rem"}}>
@@ -147,7 +147,7 @@ export default function AboutProject() {
                     <Box>
                         <Stack direction="row" spacing={1} alignItems="center">
                             <GroupsIcon color="primary"/>
-                            <Typography variant="h5" component="h2">
+                            <Typography variant="subtitle1" component="h2">
                                 Project team
                             </Typography>
                         </Stack>

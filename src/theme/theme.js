@@ -66,10 +66,14 @@ const theme = createTheme({
         subtitle1: {
             color: BRAND_ORANGE,
             fontWeight: 900,
+            fontSize: "1.25rem",
+            lineHeight: 1.35,
         },
         subtitle2: {
             color: BRAND_ORANGE,
             fontWeight: 900,
+            fontSize: "1rem",
+            lineHeight: 1.4,
         },
         button: {
             textTransform: "none",

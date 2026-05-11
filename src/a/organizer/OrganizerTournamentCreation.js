@@ -123,7 +123,7 @@ export default function OrganizerTournamentCreation() {
             <AppSurface>
                 <Stack spacing={2} component="form" onSubmit={handleSubmit}>
                     <Box>
-                        <Typography variant="h5" component="h2">
+                        <Typography variant="subtitle1" component="h2">
                             Create tournament
                         </Typography>
                         <Typography variant="body2" sx={{mt: 0.5, color: "text.secondary"}}>
@@ -198,7 +198,7 @@ export default function OrganizerTournamentCreation() {
 
             {createdTournaments.length > 0 && (
                 <AppSurface>
-                    <Typography variant="h6" component="h2">
+                    <Typography variant="subtitle1" component="h2">
                         Created tournaments
                     </Typography>
                     <Stack divider={<Divider flexItem/>} spacing={2} sx={{mt: 2}}>

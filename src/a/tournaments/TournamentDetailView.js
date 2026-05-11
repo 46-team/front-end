@@ -270,7 +270,7 @@ function TeamTournamentSubmission({tournament, currentUser, onReload, onAuthErro
         <AppSurface>
             <Stack spacing={2}>
                 <Box>
-                    <Typography variant="h6" component="h2">
+                    <Typography variant="subtitle1" component="h2">
                         Submission
                     </Typography>
                     <Typography variant="body2" sx={{mt: 0.5, color: "text.secondary"}}>
@@ -456,7 +456,7 @@ function TournamentParticipantAssignment({tournament, onAssigned, onAuthError}) 
         <AppSurface>
             <Stack spacing={2} component="form" onSubmit={handleSubmit}>
                 <Box>
-                    <Typography variant="h6" component="h2">
+                    <Typography variant="subtitle1" component="h2">
                         Assign participants
                     </Typography>
                     <Typography variant="body2" sx={{mt: 0.5, color: "text.secondary"}}>
@@ -769,7 +769,7 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
                 <Stack spacing={2}>
                     <Stack direction="row" spacing={1} alignItems="center">
                         <GroupsIcon color="action"/>
-                        <Typography variant="h6" component="h2">
+                        <Typography variant="subtitle1" component="h2">
                             Participants
                         </Typography>
                         <Chip label={participants.length} size="small"/>

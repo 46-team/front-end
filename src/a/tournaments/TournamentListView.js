@@ -95,7 +95,7 @@ export default function TournamentListView({onAuthError}) {
         return (
             <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
                 <Stack spacing={1}>
-                    <Typography variant="h5" component="h2" sx={{fontWeight: 800}}>
+                    <Typography variant="subtitle1" component="h2">
                         No tournaments yet
                     </Typography>
                     <Typography sx={{color: "text.secondary"}}>
@@ -110,7 +110,7 @@ export default function TournamentListView({onAuthError}) {
         <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
             <Stack spacing={2}>
                 <Box>
-                    <Typography variant="h5" component="h2" sx={{fontWeight: 800}}>
+                    <Typography variant="subtitle1" component="h2">
                         Your tournaments
                     </Typography>
                     <Typography sx={{mt: 0.5, color: "text.secondary"}}>
@@ -131,7 +131,7 @@ export default function TournamentListView({onAuthError}) {
                         >
                             <Box sx={{minWidth: 0}}>
                                 <Stack direction={{xs: "column", sm: "row"}} spacing={1} alignItems={{xs: "flex-start", sm: "center"}}>
-                                    <Typography variant="h6" component="h3" sx={{fontWeight: 700, wordBreak: "break-word"}}>
+                                    <Typography variant="subtitle2" component="h3" sx={{wordBreak: "break-word"}}>
                                         {tournament.title || "Untitled tournament"}
                                     </Typography>
                                     <Chip

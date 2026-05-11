@@ -25,7 +25,7 @@ const PAGE_TITLES = {
 function WorkspacePanel({title, subtitle}) {
     return (
         <AppSurface>
-            <Typography variant="h5" component="h2">
+            <Typography variant="subtitle1" component="h2">
                 {title}
             </Typography>
             <Typography sx={{mt: 1, color: "text.secondary"}}>
@@ -64,7 +64,7 @@ function TeamWorkspace({user, onOpenTournaments}) {
                 <Stack spacing={2}>
                     <Stack direction={{xs: "column", sm: "row"}} spacing={1.5} alignItems={{xs: "flex-start", sm: "center"}}>
                         <Box sx={{minWidth: 0, flex: 1}}>
-                            <Typography variant="h5" component="h2" sx={{fontWeight: 800, wordBreak: "break-word"}}>
+                            <Typography variant="subtitle1" component="h2" sx={{wordBreak: "break-word"}}>
                                 {user.full_name || user.displayName}
                             </Typography>
                             <Typography sx={{mt: 0.5, color: "text.secondary"}}>
@@ -92,7 +92,7 @@ function TeamWorkspace({user, onOpenTournaments}) {
                 }}
             >
                 <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
-                    <Typography variant="h6" component="h2" sx={{fontWeight: 800}}>
+                    <Typography variant="subtitle1" component="h2">
                         Team profile
                     </Typography>
                     <Stack spacing={1.5} sx={{mt: 2}}>
@@ -117,7 +117,7 @@ function TeamWorkspace({user, onOpenTournaments}) {
                 </Paper>
 
                 <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
-                    <Typography variant="h6" component="h2" sx={{fontWeight: 800}}>
+                    <Typography variant="subtitle1" component="h2">
                         Access
                     </Typography>
                     <Stack spacing={1.25} sx={{mt: 2}}>
@@ -129,7 +129,7 @@ function TeamWorkspace({user, onOpenTournaments}) {
             </Box>
 
             <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
-                <Typography variant="h6" component="h2" sx={{fontWeight: 800}}>
+                <Typography variant="subtitle1" component="h2">
                     What your team can do
                 </Typography>
                 <Stack divider={<Divider flexItem/>} spacing={2} sx={{mt: 2}}>
@@ -219,7 +219,7 @@ function Overview({user}) {
                         >
                             Workspace overview
                         </Typography>
-                        <Typography variant="h4" component="h2" sx={{mt: 0.5, fontWeight: 800}}>
+                        <Typography variant="subtitle1" component="h2" sx={{mt: 0.5}}>
                             Welcome back, {user.displayName}
                         </Typography>
                         <Typography sx={{mt: 1, maxWidth: 720, color: "text.secondary"}}>
@@ -243,7 +243,7 @@ function Overview({user}) {
                 }}
             >
                 <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
-                    <Typography variant="h6" component="h3" sx={{fontWeight: 800}}>
+                    <Typography variant="subtitle1" component="h3">
                         Getting started
                     </Typography>
                     <Stack spacing={1.5} sx={{mt: 2}}>
@@ -269,7 +269,7 @@ function Overview({user}) {
                 </Paper>
 
                 <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
-                    <Typography variant="h6" component="h3" sx={{fontWeight: 800}}>
+                    <Typography variant="subtitle1" component="h3">
                         Workspace status
                     </Typography>
                     <Stack spacing={1.25} sx={{mt: 2}}>
@@ -368,7 +368,7 @@ export default function MainContainer({onLogout}) {
                     <Typography variant="h4" component="h1">
                         {PAGE_TITLES[visibleItem] || PAGE_TITLES.overview}
                     </Typography>
-                    <Typography sx={{mt: 0.5, color: "text.secondary"}}>
+                    <Typography variant="subtitle2" component="p" sx={{mt: 0.5}}>
                         {user.roleLabel}
                     </Typography>
                 </Box>

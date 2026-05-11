@@ -267,10 +267,10 @@ function TeamTournamentSubmission({tournament, currentUser, onReload, onAuthErro
     }
 
     return (
-        <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
+        <AppSurface>
             <Stack spacing={2}>
                 <Box>
-                    <Typography variant="h6" component="h2" sx={{fontWeight: 800}}>
+                    <Typography variant="h6" component="h2">
                         Submission
                     </Typography>
                     <Typography variant="body2" sx={{mt: 0.5, color: "text.secondary"}}>
@@ -286,7 +286,7 @@ function TeamTournamentSubmission({tournament, currentUser, onReload, onAuthErro
                     <Button
                         variant={isFormOpen ? "outlined" : "contained"}
                         onClick={() => setIsFormOpen(previous => !previous)}
-                        sx={{textTransform: "none", alignSelf: "flex-start"}}
+                        sx={{alignSelf: "flex-start"}}
                     >
                         {isFormOpen ? "Hide submission form" : (currentSubmission ? "Edit submission" : "Open submission form")}
                     </Button>
@@ -357,7 +357,7 @@ function TeamTournamentSubmission({tournament, currentUser, onReload, onAuthErro
                                 variant="contained"
                                 startIcon={isSubmitting ? <CircularProgress color="inherit" size={18}/> : <SaveIcon/>}
                                 disabled={isSubmitting}
-                                sx={{textTransform: "none", minWidth: 180}}
+                                sx={{minWidth: 180}}
                             >
                                 {currentSubmission ? "Update submission" : "Submit project"}
                             </Button>
@@ -368,7 +368,7 @@ function TeamTournamentSubmission({tournament, currentUser, onReload, onAuthErro
                     </Stack>
                 )}
             </Stack>
-        </Paper>
+        </AppSurface>
     );
 }
 
@@ -756,7 +756,7 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
                         <DetailRow label="Created" value={formatDateTime(tournament.created_at)}/>
                     </Stack>
                 </Stack>
-            </Paper>
+            </AppSurface>
 
             <TeamTournamentSubmission
                 tournament={tournament}

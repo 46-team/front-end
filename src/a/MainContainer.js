@@ -10,6 +10,7 @@ import {normalizeUser} from "./layout/userUtils";
 import OrganizerTournamentCreation from "./organizer/OrganizerTournamentCreation";
 import TournamentDetailView from "./tournaments/TournamentDetailView";
 import TournamentListView from "./tournaments/TournamentListView";
+import AppSurface from "../ui/AppSurface";
 
 const PAGE_TITLES = {
     overview: "Overview",

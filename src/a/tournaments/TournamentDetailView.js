@@ -1,0 +1,819 @@
+import {useCallback, useEffect, useMemo, useState} from "react";
+import {useNavigate, useParams} from "react-router-dom";
+import {
+    Alert,
+    Autocomplete,
+    Box,
+    Button,
+    Chip,
+    CircularProgress,
+    Divider,
+    MenuItem,
+    Stack,
+    TextField,
+    Typography,
+} from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import GroupsIcon from "@mui/icons-material/Groups";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import SaveIcon from "@mui/icons-material/Save";
+import SearchIcon from "@mui/icons-material/Search";
+import {requestWS} from "../../api/wsClient";
+import {formatDate, formatDateTime, getTournamentErrorMessage, isAuthError} from "./tournamentFormatters";
+import AppSurface from "../../ui/AppSurface";
+
+const TOURNAMENT_STATUSES = ["Draft", "Registration", "Running", "Finished"];
+
+const ASSIGNMENT_ERROR_MESSAGES = {
+    "Authentication required": "Please sign in again.",
+    "Invalid token": "Please sign in again.",
+    "Access denied": "Only the tournament organizer can assign participants.",
+    "Required data is missing": "Tournament and participant selection are required.",
+    "Invalid tournament_id": "Invalid tournament id.",
+    "Tournament not found": "Tournament was not found.",
+    "Invalid participant_ids": "Participant selection is invalid.",
+    "Invalid user_id": "One selected user has an invalid id.",
+    "User not found": "One selected user was not found.",
+};
+
+const STATUS_ERROR_MESSAGES = {
+    "Authentication required": "Please sign in again.",
+    "Invalid token": "Please sign in again.",
+    "Access denied": "Only the tournament organizer can change the status.",
+    "Required data is missing": "Tournament and status are required.",
+    "Invalid tournament_id": "Invalid tournament id.",
+    "Invalid status": "Choose a valid tournament status.",
+    "Tournament not found": "Tournament was not found.",
+};
+
+const SUBMISSION_ERROR_MESSAGES = {
+    "Authentication required": "Please sign in again.",
+    "Invalid token": "Please sign in again.",
+    "Access denied": "You do not have permission to submit for this tournament.",
+    "Tournament not found": "Tournament was not found.",
+    "SubmissionClosed": "Submission is closed for this tournament.",
+    "Required data is missing": "Repository and demo video links are required.",
+};
+
+function getAssignmentErrorMessage(error) {
+    const rawMessage = error?.message || error?.raw?.error || "Request failed. Please try again.";
+    return ASSIGNMENT_ERROR_MESSAGES[rawMessage] || rawMessage;
+}
+
+function getStatusErrorMessage(error) {
+    const code = String(error?.code || error?.raw?.err_code || "").replace(/^#/, "");
+    const rawMessage = error?.message || error?.raw?.error || "Status update failed. Please try again.";
+
+    if (code === "AUTH_TOKEN_EMPTY" || code === "INSECURE_CONNECTION") return "Please sign in again.";
+    if (code === "FORBIDDEN") return "Only the tournament organizer can change the status.";
+    if (code === "INCOMPLETE_REQUEST") return "Tournament and status are required.";
+    if (code === "INVALID_ID") return "Invalid tournament id.";
+    if (code === "INVALID_STATUS") return "Choose a valid tournament status.";
+    if (code === "NOT_FOUND") return "Tournament was not found.";
+
+    return STATUS_ERROR_MESSAGES[rawMessage] || rawMessage;
+}
+
+function getSubmissionErrorMessage(error) {
+    const rawMessage = error?.message || error?.raw?.error || "Submission failed. Please try again.";
+    return SUBMISSION_ERROR_MESSAGES[rawMessage] || rawMessage;
+}
+
+function DetailRow({label, value}) {
+    return (
+        <Box
+            sx={{
+                display: "grid",
+                gridTemplateColumns: {xs: "1fr", sm: "150px 1fr"},
+                gap: {xs: 0.25, sm: 2},
+            }}
+        >
+            <Typography variant="body2" sx={{color: "text.secondary"}}>
+                {label}
+            </Typography>
+            <Typography sx={{fontWeight: 600, wordBreak: "break-word"}}>
+                {value || "-"}
+            </Typography>
+        </Box>
+    );
+}
+
+function ParticipantName({participant}) {
+    const displayName = participant.full_name || participant.login || participant.email || participant._id;
+
+    return (
+        <Box sx={{minWidth: 0}}>
+            <Typography sx={{fontWeight: 700, wordBreak: "break-word"}}>
+                {displayName}
+            </Typography>
+            <Typography variant="body2" sx={{color: "text.secondary", wordBreak: "break-word"}}>
+                {participant.email || "-"}
+            </Typography>
+        </Box>
+    );
+}
+
+function getUserLabel(user) {
+    return user.full_name || user.login || user.email || user._id || "Unnamed user";
+}
+
+function getUserId(userOrId) {
+    return typeof userOrId === "object" && userOrId !== null ? userOrId._id : userOrId;
+}
+
+function getTournamentCreatorLabel(tournament, currentUser) {
+    const createdBy = tournament.created_by;
+    const creatorId = getUserId(createdBy);
+
+    if (createdBy && typeof createdBy === "object") {
+        return getUserLabel(createdBy);
+    }
+
+    if (creatorId && creatorId === currentUser?._id) {
+        return getUserLabel(currentUser);
+    }
+
+    return tournament.creator_name || tournament.created_by_name || "Tournament Organizer";
+}
+
+function mergeUsers(...userLists) {
+    const usersById = new Map();
+
+    userLists.flat().forEach(user => {
+        if (user?._id && !usersById.has(user._id)) {
+            usersById.set(user._id, user);
+        }
+    });
+
+    return Array.from(usersById.values());
+}
+
+function getCurrentTeamSubmission(tournament, currentUser) {
+    if (tournament?.my_submission && typeof tournament.my_submission === "object") {
+        return tournament.my_submission;
+    }
+
+    if (Array.isArray(tournament?.submissions)) {
+        return tournament.submissions.find(submission => submission?.team_id === currentUser?._id) || null;
+    }
+
+    return null;
+}
+
+function getSubmissionDeadline(tournament) {
+    return tournament?.submission_deadline || tournament?.end_date || null;
+}
+
+function isSubmissionClosedForTournament(tournament) {
+    if (tournament?.submission_closed === true) {
+        return true;
+    }
+
+    const deadline = getSubmissionDeadline(tournament);
+    if (!deadline) {
+        return false;
+    }
+
+    const parsedDeadline = new Date(deadline);
+    if (Number.isNaN(parsedDeadline.getTime())) {
+        return false;
+    }
+
+    return Date.now() > parsedDeadline.getTime();
+}
+
+function normalizeTournamentStatus(status) {
+    return typeof status === "string" ? status.trim().toLowerCase() : "";
+}
+
+function canTeamSubmitForStatus(status) {
+    const normalizedStatus = normalizeTournamentStatus(status);
+
+    return normalizedStatus === "running" || normalizedStatus === "started" || normalizedStatus === "finished";
+}
+
+function TeamTournamentSubmission({tournament, currentUser, onReload, onAuthError}) {
+    const currentStatus = tournament.status || "Draft";
+    const isRegistered = Array.isArray(tournament.participants)
+        && tournament.participants.some(participant => participant?._id === currentUser?._id);
+    const currentSubmission = getCurrentTeamSubmission(tournament, currentUser);
+    const submissionClosed = isSubmissionClosedForTournament(tournament);
+    const canAccessSubmission = currentUser?.role === "team" && isRegistered && canTeamSubmitForStatus(currentStatus);
+    const [isFormOpen, setIsFormOpen] = useState(Boolean(currentSubmission));
+    const [form, setForm] = useState({
+        repositoryUrl: currentSubmission?.repository_url || "",
+        videoDemoUrl: currentSubmission?.video_demo_url || "",
+        liveDemoUrl: currentSubmission?.live_demo_url || "",
+        description: currentSubmission?.description || "",
+    });
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        setForm({
+            repositoryUrl: currentSubmission?.repository_url || "",
+            videoDemoUrl: currentSubmission?.video_demo_url || "",
+            liveDemoUrl: currentSubmission?.live_demo_url || "",
+            description: currentSubmission?.description || "",
+        });
+        setIsFormOpen(Boolean(currentSubmission));
+    }, [currentSubmission, tournament._id]);
+
+    if (!canAccessSubmission) {
+        return null;
+    }
+
+    function updateField(field, value) {
+        setForm(previous => ({
+            ...previous,
+            [field]: value,
+        }));
+    }
+
+    async function handleSubmit(event) {
+        event.preventDefault();
+
+        if (!form.repositoryUrl.trim() || !form.videoDemoUrl.trim()) {
+            setError("Repository and demo video links are required.");
+            setSuccess("");
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            setError("");
+            setSuccess("");
+
+            await requestWS("upsert_tournament_submission", {
+                tournament_id: tournament._id,
+                repository_url: form.repositoryUrl.trim(),
+                video_demo_url: form.videoDemoUrl.trim(),
+                live_demo_url: form.liveDemoUrl.trim() || null,
+                description: form.description.trim() || null,
+            });
+
+            await onReload?.();
+            setSuccess("Submission saved successfully.");
+        } catch (submitError) {
+            setError(getSubmissionErrorMessage(submitError));
+
+            if (isAuthError(submitError)) {
+                onAuthError?.();
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
+
+    return (
+        <AppSurface>
+            <Stack spacing={2}>
+                <Box>
+                    <Typography variant="subtitle1" component="h2">
+                        Submission
+                    </Typography>
+                    <Typography variant="body2" sx={{mt: 0.5, color: "text.secondary"}}>
+                        Submit your GitHub repository and demo video after the tournament starts.
+                    </Typography>
+                </Box>
+
+                {submissionClosed ? (
+                    <Alert severity="warning">
+                        Submission is closed for this tournament.
+                    </Alert>
+                ) : (
+                    <Button
+                        variant={isFormOpen ? "outlined" : "contained"}
+                        onClick={() => setIsFormOpen(previous => !previous)}
+                        sx={{alignSelf: "flex-start"}}
+                    >
+                        {isFormOpen ? "Hide submission form" : (currentSubmission ? "Edit submission" : "Open submission form")}
+                    </Button>
+                )}
+
+                {currentSubmission && (
+                    <Stack spacing={1}>
+                        <DetailRow label="Repository" value={currentSubmission.repository_url}/>
+                        <DetailRow label="Video demo" value={currentSubmission.video_demo_url}/>
+                        <DetailRow label="Live demo" value={currentSubmission.live_demo_url}/>
+                        <DetailRow label="Submitted" value={formatDateTime(currentSubmission.updated_at || currentSubmission.created_at)}/>
+                    </Stack>
+                )}
+
+                {isFormOpen && !submissionClosed && (
+                    <Stack spacing={2} component="form" onSubmit={handleSubmit}>
+                        {error && (
+                            <Alert severity="error" onClose={() => setError("")}>
+                                {error}
+                            </Alert>
+                        )}
+
+                        {success && (
+                            <Alert severity="success" onClose={() => setSuccess("")}>
+                                {success}
+                            </Alert>
+                        )}
+
+                        <TextField
+                            label="GitHub repository"
+                            value={form.repositoryUrl}
+                            onChange={event => updateField("repositoryUrl", event.target.value)}
+                            fullWidth
+                            required
+                            autoComplete="off"
+                            placeholder="https://github.com/org/project"
+                        />
+                        <TextField
+                            label="Video demo"
+                            value={form.videoDemoUrl}
+                            onChange={event => updateField("videoDemoUrl", event.target.value)}
+                            fullWidth
+                            required
+                            autoComplete="off"
+                            placeholder="https://youtube.com/... or https://drive.google.com/..."
+                        />
+                        <TextField
+                            label="Live demo"
+                            value={form.liveDemoUrl}
+                            onChange={event => updateField("liveDemoUrl", event.target.value)}
+                            fullWidth
+                            autoComplete="off"
+                            placeholder="https://your-demo.example.com"
+                        />
+                        <TextField
+                            label="Short description"
+                            value={form.description}
+                            onChange={event => updateField("description", event.target.value)}
+                            fullWidth
+                            multiline
+                            minRows={4}
+                            placeholder="What was built and how to run it."
+                        />
+
+                        <Stack direction={{xs: "column", sm: "row"}} spacing={1.5} alignItems={{xs: "stretch", sm: "center"}}>
+                            <Button
+                                type="submit"
+                                variant="contained"
+                                startIcon={isSubmitting ? <CircularProgress color="inherit" size={18}/> : <SaveIcon/>}
+                                disabled={isSubmitting}
+                                sx={{minWidth: 180}}
+                            >
+                                {currentSubmission ? "Update submission" : "Submit project"}
+                            </Button>
+                            <Typography variant="body2" sx={{color: "text.secondary"}}>
+                                Required: GitHub repository and demo video link.
+                            </Typography>
+                        </Stack>
+                    </Stack>
+                )}
+            </Stack>
+        </AppSurface>
+    );
+}
+
+function TournamentParticipantAssignment({tournament, onAssigned, onAuthError}) {
+    const assignedParticipants = useMemo(() => {
+        return Array.isArray(tournament.participants) ? tournament.participants : [];
+    }, [tournament.participants]);
+    const [query, setQuery] = useState("");
+    const [candidateUsers, setCandidateUsers] = useState([]);
+    const [selectedUsers, setSelectedUsers] = useState(assignedParticipants);
+    const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+
+    const options = mergeUsers(selectedUsers, assignedParticipants, candidateUsers);
+
+    const loadCandidateUsers = useCallback(async (searchText = "") => {
+        try {
+            setIsLoadingUsers(true);
+            setError("");
+
+            const payload = await requestWS("search_users", {
+                purpose: "tournament_participants",
+                query: searchText.trim(),
+                limit: 50,
+            });
+
+            setCandidateUsers(Array.isArray(payload.users) ? payload.users : []);
+        } catch (loadError) {
+            const message = getAssignmentErrorMessage(loadError);
+            setError(message);
+
+            if (isAuthError(loadError)) {
+                onAuthError?.();
+            }
+        } finally {
+            setIsLoadingUsers(false);
+        }
+    }, [onAuthError]);
+
+    useEffect(() => {
+        setSelectedUsers(assignedParticipants);
+    }, [tournament._id, assignedParticipants]);
+
+    useEffect(() => {
+        loadCandidateUsers("");
+    }, [loadCandidateUsers]);
+
+    function handleSearchSubmit(event) {
+        event.preventDefault();
+        loadCandidateUsers(query);
+    }
+
+    async function handleSubmit(event) {
+        event.preventDefault();
+
+        const participantIds = selectedUsers.map(user => user._id).filter(Boolean);
+
+        try {
+            setIsSubmitting(true);
+            setError("");
+            setSuccess("");
+
+            await requestWS("assign_tournament_participants", {
+                tournament_id: tournament._id,
+                participant_ids: participantIds,
+            });
+
+            await onAssigned?.();
+            setSuccess("Participants assigned successfully.");
+        } catch (assignError) {
+            const message = getAssignmentErrorMessage(assignError);
+            setError(message);
+
+            if (isAuthError(assignError)) {
+                onAuthError?.();
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
+
+    return (
+        <AppSurface>
+            <Stack spacing={2} component="form" onSubmit={handleSubmit}>
+                <Box>
+                    <Typography variant="subtitle1" component="h2">
+                        Assign participants
+                    </Typography>
+                    <Typography variant="body2" sx={{mt: 0.5, color: "text.secondary"}}>
+                        Search users and choose who should participate in this tournament.
+                    </Typography>
+                </Box>
+
+                {error && (
+                    <Alert severity="error" onClose={() => setError("")}>
+                        {error}
+                    </Alert>
+                )}
+
+                {success && (
+                    <Alert severity="success" onClose={() => setSuccess("")}>
+                        {success}
+                    </Alert>
+                )}
+
+                <Stack
+                    component="div"
+                    direction={{xs: "column", sm: "row"}}
+                    spacing={1}
+                >
+                    <TextField
+                        label="Search users"
+                        value={query}
+                        onChange={event => setQuery(event.target.value)}
+                        size="small"
+                        fullWidth
+                        autoComplete="off"
+                    />
+                    <Button
+                        type="button"
+                        variant="outlined"
+                        startIcon={isLoadingUsers ? <CircularProgress color="inherit" size={18}/> : <SearchIcon/>}
+                        disabled={isLoadingUsers}
+                        onClick={handleSearchSubmit}
+                        sx={{minWidth: 120}}
+                    >
+                        Search
+                    </Button>
+                </Stack>
+
+                <Autocomplete
+                    multiple
+                    disableCloseOnSelect
+                    options={options}
+                    value={selectedUsers}
+                    loading={isLoadingUsers}
+                    getOptionLabel={getUserLabel}
+                    isOptionEqualToValue={(option, value) => option._id === value._id}
+                    onChange={(event, nextUsers) => {
+                        setSelectedUsers(nextUsers);
+                        setSuccess("");
+                    }}
+                    renderOption={(props, option) => {
+                        const {key, ...optionProps} = props;
+
+                        return (
+                            <Box component="li" {...optionProps} key={key}>
+                                <Box sx={{minWidth: 0}}>
+                                    <Typography variant="body2" sx={{fontWeight: 700, wordBreak: "break-word"}}>
+                                        {getUserLabel(option)}
+                                    </Typography>
+                                    <Typography variant="caption" sx={{color: "text.secondary", wordBreak: "break-word"}}>
+                                        {option.email || "-"} | {option.role || "participant"}
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        );
+                    }}
+                    renderInput={(params) => (
+                        <TextField
+                            {...params}
+                            label="Participants"
+                            placeholder="Choose users"
+                            helperText={`${selectedUsers.length} selected`}
+                            InputProps={{
+                                ...params.InputProps,
+                                endAdornment: (
+                                    <>
+                                        {isLoadingUsers ? <CircularProgress color="inherit" size={18}/> : null}
+                                        {params.InputProps.endAdornment}
+                                    </>
+                                ),
+                            }}
+                        />
+                    )}
+                />
+
+                <Box>
+                    <Button
+                        type="submit"
+                        variant="contained"
+                        startIcon={isSubmitting ? <CircularProgress color="inherit" size={18}/> : <SaveIcon/>}
+                        disabled={isSubmitting}
+                        sx={{minWidth: 190}}
+                    >
+                        Save participants
+                    </Button>
+                </Box>
+            </Stack>
+        </AppSurface>
+    );
+}
+
+export default function TournamentDetailView({tournamentId: tournamentIdProp, currentUser, onAuthError}) {
+    const {tournamentId: routeTournamentId} = useParams();
+    const tournamentId = tournamentIdProp || routeTournamentId;
+    const navigate = useNavigate();
+    const [tournament, setTournament] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [statusError, setStatusError] = useState("");
+    const [statusSuccess, setStatusSuccess] = useState("");
+    const [isStatusSubmitting, setIsStatusSubmitting] = useState(false);
+
+    const loadTournament = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            setError("");
+
+            const payload = await requestWS("get_tournament", {
+                tournament_id: tournamentId,
+            });
+
+            setTournament(payload.tournament || null);
+        } catch (loadError) {
+            const message = getTournamentErrorMessage(loadError);
+            setTournament(null);
+            setError(message);
+
+            if (isAuthError(loadError)) {
+                onAuthError?.();
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    }, [onAuthError, tournamentId]);
+
+    useEffect(() => {
+        loadTournament();
+    }, [loadTournament]);
+
+    async function handleStatusChange(event) {
+        const nextStatus = event.target.value;
+
+        if (!tournament || nextStatus === (tournament.status || "Draft")) {
+            return;
+        }
+
+        try {
+            setIsStatusSubmitting(true);
+            setStatusError("");
+            setStatusSuccess("");
+
+            const payload = await requestWS("change_tournament_status", {
+                tournament_id: tournament._id,
+                status: nextStatus,
+            });
+
+            if (payload.tournament) {
+                setTournament(payload.tournament);
+            }
+
+            await loadTournament();
+            setStatusSuccess("Tournament status updated successfully.");
+        } catch (changeError) {
+            const message = getStatusErrorMessage(changeError);
+            setStatusError(message);
+
+            if (isAuthError(changeError)) {
+                onAuthError?.();
+            }
+        } finally {
+            setIsStatusSubmitting(false);
+        }
+    }
+
+    if (isLoading) {
+        return (
+            <AppSurface>
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                    <CircularProgress size={22}/>
+                    <Typography>Loading tournament details...</Typography>
+                </Stack>
+            </AppSurface>
+        );
+    }
+
+    if (error) {
+        return (
+            <AppSurface>
+                <Stack spacing={2} alignItems="flex-start">
+                    <Button
+                        variant="text"
+                        startIcon={<ArrowBackIcon/>}
+                        onClick={() => navigate("/tournaments")}
+                    >
+                        Back to tournaments
+                    </Button>
+                    <Alert severity="error" sx={{width: "100%"}}>
+                        {error}
+                    </Alert>
+                    <Button
+                        variant="outlined"
+                        startIcon={<RefreshIcon/>}
+                        onClick={loadTournament}
+                    >
+                        Try again
+                    </Button>
+                </Stack>
+            </AppSurface>
+        );
+    }
+
+    if (!tournament) {
+        return null;
+    }
+
+    const participants = Array.isArray(tournament.participants) ? tournament.participants : [];
+    const creatorId = getUserId(tournament.created_by);
+    const isTournamentCreator =
+        currentUser?.role === "organizer" && creatorId === currentUser?._id;
+    const canManageStatus = isTournamentCreator;
+    const canManageParticipants = isTournamentCreator;
+    const currentStatus = tournament.status || "Draft";
+    const creatorLabel = getTournamentCreatorLabel(tournament, currentUser);
+    
+
+    return (
+        <Stack spacing={2}>
+            <AppSurface>
+                <Stack spacing={2}>
+                    <Box>
+                        <Button
+                            variant="text"
+                            startIcon={<ArrowBackIcon/>}
+                            onClick={() => navigate("/tournaments")}
+                            sx={{mb: 1}}
+                        >
+                            Back to tournaments
+                        </Button>
+                        <Stack direction={{xs: "column", sm: "row"}} spacing={1.5} alignItems={{xs: "flex-start", sm: "center"}}>
+                            <Typography variant="h5" component="h2" sx={{wordBreak: "break-word"}}>
+                                {tournament.title}
+                            </Typography>
+                            {canManageStatus ? (
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <TextField
+                                        select
+                                        label="Status"
+                                        value={currentStatus}
+                                        onChange={handleStatusChange}
+                                        size="small"
+                                        disabled={isStatusSubmitting}
+                                        sx={{minWidth: 170}}
+                                    >
+                                        {TOURNAMENT_STATUSES.map(status => (
+                                            <MenuItem key={status} value={status}>
+                                                {status}
+                                            </MenuItem>
+                                        ))}
+                                    </TextField>
+                                    {isStatusSubmitting && <CircularProgress size={20}/>}
+                                </Stack>
+                            ) : (
+                                <Chip label={currentStatus} size="small"/>
+                            )}
+                        </Stack>
+                        {tournament.description && (
+                            <Typography sx={{mt: 1, color: "text.secondary"}}>
+                                {tournament.description}
+                            </Typography>
+                        )}
+                    </Box>
+
+                    {statusError && (
+                        <Alert severity="error" onClose={() => setStatusError("")}>
+                            {statusError}
+                        </Alert>
+                    )}
+
+                    {statusSuccess && (
+                        <Alert severity="success" onClose={() => setStatusSuccess("")}>
+                            {statusSuccess}
+                        </Alert>
+                    )}
+
+                    <Divider/>
+
+                    <Stack spacing={1.5}>
+                        <DetailRow label="Start date" value={formatDate(tournament.start_date)}/>
+                        <DetailRow label="End date" value={formatDate(tournament.end_date)}/>
+                        <DetailRow label="Creator" value={creatorLabel}/>
+                        <DetailRow label="Created" value={formatDateTime(tournament.created_at)}/>
+                    </Stack>
+                </Stack>
+            </AppSurface>
+
+            <TeamTournamentSubmission
+                tournament={tournament}
+                currentUser={currentUser}
+                onReload={loadTournament}
+                onAuthError={onAuthError}
+            />
+
+            <AppSurface>
+                <Stack spacing={2}>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <GroupsIcon color="action"/>
+                        <Typography variant="subtitle1" component="h2">
+                            Participants
+                        </Typography>
+                        <Chip label={participants.length} size="small"/>
+                    </Stack>
+
+                    {participants.length === 0 ? (
+                        <Box>
+                            <Typography sx={{fontWeight: 700}}>No participants assigned.</Typography>
+                            <Typography variant="body2" sx={{mt: 0.5, color: "text.secondary"}}>
+                                Assigned teams and judges will appear here.
+                            </Typography>
+                        </Box>
+                    ) : (
+                        <Stack divider={<Divider flexItem/>} spacing={1.5}>
+                            {participants.map(participant => (
+                                <Box
+                                    key={participant._id}
+                                    sx={{
+                                        display: "grid",
+                                        gridTemplateColumns: {xs: "1fr", sm: "1fr auto"},
+                                        gap: 1.5,
+                                        alignItems: "center",
+                                    }}
+                                >
+                                    <ParticipantName participant={participant}/>
+                                    <Chip
+                                        label={participant.role || "participant"}
+                                        size="small"
+                                        sx={{justifySelf: {xs: "start", sm: "end"}}}
+                                    />
+                                </Box>
+                            ))}
+                        </Stack>
+                    )}
+                </Stack>
+            </AppSurface>
+
+            {canManageParticipants && (
+                <TournamentParticipantAssignment
+                    tournament={tournament}
+                    onAssigned={loadTournament}
+                    onAuthError={onAuthError}
+                />
+            )}
+        </Stack>
+    );
+}

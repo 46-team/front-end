@@ -1,0 +1,6 @@
+.swal2-show-fast {
+    animation: swal2-show 0.1s !important;
+}
+.swal2-hide-fast {
+    animation: swal2-hide 0.1s !important;
+}

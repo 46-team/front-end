@@ -11,12 +11,18 @@ import CenteredPage from "../../ui/CenteredPage";
 import {cardEntranceVariants, staggeredItemVariants} from "../../ui/animations";
 
 const MIN_PASSWORD_LENGTH = 8;
+const EMAIL_FORMAT_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const LOGIN_FORMAT_RE = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/;
 
 const REGISTER_ERROR_MESSAGES = {
     "#INCOMPLETE_REQUEST": "Please fill in all required fields.",
     "#INVALID_PASSWORD": "Password must be at least 8 characters long.",
+    "#INVALID_LOGIN": "Login must be 3-30 characters and use Latin letters, digits, '.', '_' or '-'.",
+    "#INVALID_EMAIL": "Please enter a valid email address.",
     "#USER_ALREADY_EXISTS": "An account with this login or email already exists.",
 };
+
+const EMPTY_FIELD_ERRORS = {};
 
 export default function Login({setPage}) {
     const theme = useTheme();
@@ -28,6 +34,7 @@ export default function Login({setPage}) {
     const [password, setPassword] = useState("");
     const [passwordConfirmation, setPasswordConfirmation] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [fieldErrors, setFieldErrors] = useState(EMPTY_FIELD_ERRORS);
 
     useEffect(() => {
         const disableContextMenu = (e) => e.preventDefault();
@@ -36,13 +43,25 @@ export default function Login({setPage}) {
     }, []);
 
     async function handleLogin() {
-        if (!login.trim() || !password) {
-            showError("Error", "Some required data for authorization is missing.")
+        const nextFieldErrors = {};
+
+        if (!login.trim()) {
+            nextFieldErrors.login = "Login or email is required.";
+        }
+
+        if (!password) {
+            nextFieldErrors.password = "Password is required.";
+        }
+
+        if (Object.keys(nextFieldErrors).length > 0) {
+            setFieldErrors(nextFieldErrors);
+            showError("Error", "Some required data for authorization is missing.");
             return;
         }
 
         try {
             setIsSubmitting(true);
+            setFieldErrors(EMPTY_FIELD_ERRORS);
             const payload = await requestWS("auth", {
                 "email": login.trim(),
                 "password": password
@@ -52,6 +71,12 @@ export default function Login({setPage}) {
 
             handleAuthSuccess(payload);
         } catch (error) {
+            if (error?.code === "#INCORRECT_LOGIN") {
+                setFieldErrors({
+                    login: "Check your login or email.",
+                    password: "Check your password.",
+                });
+            }
             showError('Error', error.message);
         } finally {
             setIsSubmitting(false);
@@ -65,30 +90,24 @@ export default function Login({setPage}) {
             email: email.trim(),
             password,
         };
+        const nextFieldErrors = validateRegistration(request, passwordConfirmation);
 
-        if (!request.login || !request.full_name || !request.email || !request.password || !passwordConfirmation) {
-            showError("Registration failed", "Please fill in all required fields.");
-            return;
-        }
-
-        if (request.password.length < MIN_PASSWORD_LENGTH) {
-            showError("Registration failed", `Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`);
-            return;
-        }
-
-        if (request.password !== passwordConfirmation) {
-            showError("Registration failed", "Password confirmation does not match.");
+        if (Object.keys(nextFieldErrors).length > 0) {
+            setFieldErrors(nextFieldErrors);
+            showError("Registration failed", Object.values(nextFieldErrors)[0]);
             return;
         }
 
         try {
             setIsSubmitting(true);
+            setFieldErrors(EMPTY_FIELD_ERRORS);
             const payload = await requestWS("register_account", request, {
                 auth: false
             });
 
             handleAuthSuccess(payload);
         } catch (error) {
+            setFieldErrors(getRegistrationFieldErrors(error));
             showError("Registration failed", getRegistrationErrorMessage(error));
         } finally {
             setIsSubmitting(false);
@@ -118,6 +137,7 @@ export default function Login({setPage}) {
         setEmail("");
         setPassword("");
         setPasswordConfirmation("");
+        setFieldErrors(EMPTY_FIELD_ERRORS);
     }
 
     function switchMode(nextMode) {
@@ -140,6 +160,122 @@ export default function Login({setPage}) {
     function handleKey(e) {
         if (e.key === 'Enter') {
             handleSubmit();
+        }
+    }
+
+    function updateField(field, valueSetter, value) {
+        valueSetter(value);
+        if (!fieldErrors[field] && !(field === "password" && fieldErrors.passwordConfirmation)) {
+            return;
+        }
+
+        setFieldErrors(currentErrors => {
+            if (!shouldClearFieldError(field, value)) {
+                return currentErrors;
+            }
+
+            const nextErrors = {...currentErrors};
+            delete nextErrors[field];
+
+            if (field === "password") {
+                const nextPasswordMatches = passwordConfirmation && value === passwordConfirmation;
+                if (nextPasswordMatches) {
+                    delete nextErrors.passwordConfirmation;
+                }
+            }
+
+            return nextErrors;
+        });
+    }
+
+    function shouldClearFieldError(field, value) {
+        const trimmedValue = typeof value === "string" ? value.trim() : value;
+
+        switch (field) {
+            case "login":
+                return isRegister
+                    ? Boolean(
+                        trimmedValue
+                        && trimmedValue.length >= 3
+                        && trimmedValue.length <= 30
+                        && LOGIN_FORMAT_RE.test(trimmedValue.toLowerCase())
+                    )
+                    : Boolean(trimmedValue);
+            case "fullName":
+                return Boolean(trimmedValue);
+            case "email":
+                return Boolean(trimmedValue && EMAIL_FORMAT_RE.test(trimmedValue));
+            case "password":
+                return Boolean(value && (!isRegister || value.length >= MIN_PASSWORD_LENGTH));
+            case "passwordConfirmation":
+                return Boolean(value && password === value);
+            default:
+                return true;
+        }
+    }
+
+    function validateRegistration(request, confirmation) {
+        const nextFieldErrors = {};
+
+        if (!request.login) {
+            nextFieldErrors.login = "Login is required.";
+        } else if (
+            request.login.length < 3
+            || request.login.length > 30
+            || !LOGIN_FORMAT_RE.test(request.login.toLowerCase())
+        ) {
+            nextFieldErrors.login = REGISTER_ERROR_MESSAGES["#INVALID_LOGIN"];
+        }
+
+        if (!request.full_name) {
+            nextFieldErrors.fullName = "Full name is required.";
+        }
+
+        if (!request.email) {
+            nextFieldErrors.email = "Email is required.";
+        } else if (!EMAIL_FORMAT_RE.test(request.email)) {
+            nextFieldErrors.email = REGISTER_ERROR_MESSAGES["#INVALID_EMAIL"];
+        }
+
+        if (!request.password) {
+            nextFieldErrors.password = "Password is required.";
+        } else if (request.password.length < MIN_PASSWORD_LENGTH) {
+            nextFieldErrors.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`;
+        }
+
+        if (!confirmation) {
+            nextFieldErrors.passwordConfirmation = "Password confirmation is required.";
+        } else if (request.password && request.password !== confirmation) {
+            nextFieldErrors.passwordConfirmation = "Password confirmation does not match.";
+        }
+
+        return nextFieldErrors;
+    }
+
+    function getRegistrationFieldErrors(error) {
+        const message = getRegistrationErrorMessage(error);
+
+        switch (error?.code) {
+            case "#INVALID_LOGIN":
+                return {login: message};
+            case "#INVALID_EMAIL":
+                return {email: message};
+            case "#INVALID_PASSWORD":
+                return {password: message};
+            case "#INCOMPLETE_REQUEST":
+                return validateRegistration({
+                    login: login.trim(),
+                    full_name: fullName.trim(),
+                    email: email.trim(),
+                    password,
+                }, passwordConfirmation);
+            case "#USER_ALREADY_EXISTS":
+                return {
+                    login: message,
+                    email: message,
+                };
+            default:
+                return EMPTY_FIELD_ERRORS;
         }
     }
 
@@ -189,8 +325,10 @@ export default function Login({setPage}) {
                                     autoComplete="off"
                                     sx={{ mb: 2 }}
                                     value={login}
-                                    onChange={e => setLogin(e.target.value)}
+                                    onChange={e => updateField("login", setLogin, e.target.value)}
                                     onKeyDown={e => handleKey(e)}
+                                    error={Boolean(fieldErrors.login)}
+                                    helperText={fieldErrors.login || " "}
 
                                 />
                             </motion.div>
@@ -203,8 +341,10 @@ export default function Login({setPage}) {
                                             autoComplete="name"
                                             sx={{ mb: 2 }}
                                             value={fullName}
-                                            onChange={e => setFullName(e.target.value)}
+                                            onChange={e => updateField("fullName", setFullName, e.target.value)}
                                             onKeyDown={e => handleKey(e)}
+                                            error={Boolean(fieldErrors.fullName)}
+                                            helperText={fieldErrors.fullName || " "}
                                         />
                                     </motion.div>
                                     <motion.div custom={6} variants={staggeredItemVariants}>
@@ -215,8 +355,10 @@ export default function Login({setPage}) {
                                             autoComplete="email"
                                             sx={{ mb: 2 }}
                                             value={email}
-                                            onChange={e => setEmail(e.target.value)}
+                                            onChange={e => updateField("email", setEmail, e.target.value)}
                                             onKeyDown={e => handleKey(e)}
+                                            error={Boolean(fieldErrors.email)}
+                                            helperText={fieldErrors.email || " "}
                                         />
                                     </motion.div>
                                 </>
@@ -230,8 +372,10 @@ export default function Login({setPage}) {
                                     fullWidth
                                     sx={{ mb: isRegister ? 2 : 3 }}
                                     value={password}
-                                    onChange={e => setPassword(e.target.value)}
+                                    onChange={e => updateField("password", setPassword, e.target.value)}
                                     onKeyDown={e => handleKey(e)}
+                                    error={Boolean(fieldErrors.password)}
+                                    helperText={fieldErrors.password || " "}
                                 />
                             </motion.div>
                             {isRegister && (
@@ -243,8 +387,10 @@ export default function Login({setPage}) {
                                         fullWidth
                                         sx={{ mb: 3 }}
                                         value={passwordConfirmation}
-                                        onChange={e => setPasswordConfirmation(e.target.value)}
+                                        onChange={e => updateField("passwordConfirmation", setPasswordConfirmation, e.target.value)}
                                         onKeyDown={e => handleKey(e)}
+                                        error={Boolean(fieldErrors.passwordConfirmation)}
+                                        helperText={fieldErrors.passwordConfirmation || " "}
                                     />
                                 </motion.div>
                             )}

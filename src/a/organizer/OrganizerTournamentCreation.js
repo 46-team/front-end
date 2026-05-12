@@ -23,6 +23,7 @@ const EMPTY_FORM = {
     startDate: "",
     endDate: "",
 };
+const EMPTY_FIELD_ERRORS = {};
 
 const ERROR_MESSAGES = {
     "Authentication required": "Please sign in again.",
@@ -37,6 +38,28 @@ const ERROR_MESSAGES = {
 function getErrorMessage(error) {
     const rawMessage = error?.message || error?.error || "Request failed. Please try again.";
     return ERROR_MESSAGES[rawMessage] || rawMessage;
+}
+
+function getFieldErrorsFromMessage(message) {
+    switch (message) {
+        case ERROR_MESSAGES["Invalid tournament data: 'title' is required"]:
+        case "Invalid tournament data: 'title' is required":
+            return {title: ERROR_MESSAGES["Invalid tournament data: 'title' is required"]};
+        case ERROR_MESSAGES["Invalid tournament dates"]:
+        case "Invalid tournament dates":
+            return {
+                startDate: ERROR_MESSAGES["Invalid tournament dates"],
+                endDate: ERROR_MESSAGES["Invalid tournament dates"],
+            };
+        case ERROR_MESSAGES["Invalid tournament dates: 'start_date' must be earlier than 'end_date'"]:
+        case "Invalid tournament dates: 'start_date' must be earlier than 'end_date'":
+            return {
+                startDate: ERROR_MESSAGES["Invalid tournament dates: 'start_date' must be earlier than 'end_date'"],
+                endDate: ERROR_MESSAGES["Invalid tournament dates: 'start_date' must be earlier than 'end_date'"],
+            };
+        default:
+            return EMPTY_FIELD_ERRORS;
+    }
 }
 
 function formatTournamentDate(value) {
@@ -60,20 +83,111 @@ export default function OrganizerTournamentCreation() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+    const [fieldErrors, setFieldErrors] = useState(EMPTY_FIELD_ERRORS);
 
     function updateField(field, value) {
-        setForm(currentForm => ({
-            ...currentForm,
+        const nextForm = {
+            ...form,
             [field]: value,
-        }));
+        };
+
+        setForm(nextForm);
+        setFieldErrors(currentErrors => {
+            if (!currentErrors[field]) {
+                return currentErrors;
+            }
+
+            if (!shouldClearFieldError(field, nextForm)) {
+                return currentErrors;
+            }
+
+            const nextErrors = {...currentErrors};
+            delete nextErrors[field];
+
+            if (field === "startDate" || field === "endDate") {
+                if (areTournamentDatesValid(nextForm.startDate, nextForm.endDate)) {
+                    delete nextErrors.startDate;
+                    delete nextErrors.endDate;
+                }
+            }
+
+            return nextErrors;
+        });
+    }
+
+    function shouldClearFieldError(field, nextForm) {
+        if (field === "title") {
+            return Boolean(nextForm.title.trim());
+        }
+
+        if (field === "startDate" || field === "endDate") {
+            if (!nextForm.startDate || !nextForm.endDate) {
+                return Boolean(nextForm[field]);
+            }
+
+            return areTournamentDatesValid(nextForm.startDate, nextForm.endDate);
+        }
+
+        return true;
+    }
+
+    function areTournamentDatesValid(startDateValue, endDateValue) {
+        if (!startDateValue || !endDateValue) {
+            return false;
+        }
+
+        const startDate = new Date(startDateValue);
+        const endDate = new Date(endDateValue);
+
+        return !Number.isNaN(startDate.getTime())
+            && !Number.isNaN(endDate.getTime())
+            && startDate < endDate;
+    }
+
+    function validateForm() {
+        const nextFieldErrors = {};
+
+        if (!form.title.trim()) {
+            nextFieldErrors.title = ERROR_MESSAGES["Invalid tournament data: 'title' is required"];
+        }
+
+        if ((form.startDate && !form.endDate) || (!form.startDate && form.endDate)) {
+            const message = "Please enter both start and end dates.";
+            if (!form.startDate) {
+                nextFieldErrors.startDate = message;
+            }
+            if (!form.endDate) {
+                nextFieldErrors.endDate = message;
+            }
+        }
+
+        if (form.startDate && form.endDate) {
+            if (!areTournamentDatesValid(form.startDate, form.endDate)) {
+                const startDate = new Date(form.startDate);
+                const endDate = new Date(form.endDate);
+
+                if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+                    nextFieldErrors.startDate = ERROR_MESSAGES["Invalid tournament dates"];
+                    nextFieldErrors.endDate = ERROR_MESSAGES["Invalid tournament dates"];
+                } else {
+                    const message = ERROR_MESSAGES["Invalid tournament dates: 'start_date' must be earlier than 'end_date'"];
+                    nextFieldErrors.startDate = message;
+                    nextFieldErrors.endDate = message;
+                }
+            }
+        }
+
+        return nextFieldErrors;
     }
 
     async function handleSubmit(event) {
         event.preventDefault();
 
         const title = form.title.trim();
-        if (!title) {
-            const message = ERROR_MESSAGES["Invalid tournament data: 'title' is required"];
+        const nextFieldErrors = validateForm();
+        if (Object.keys(nextFieldErrors).length > 0) {
+            const message = Object.values(nextFieldErrors)[0];
+            setFieldErrors(nextFieldErrors);
             setError(message);
             setSuccess("");
             showError("Tournament creation failed", message);
@@ -92,6 +206,7 @@ export default function OrganizerTournamentCreation() {
             setIsSubmitting(true);
             setError("");
             setSuccess("");
+            setFieldErrors(EMPTY_FIELD_ERRORS);
 
             const payload = await requestWS("create_tournament", {
                 title,
@@ -108,10 +223,12 @@ export default function OrganizerTournamentCreation() {
             }
 
             setForm(EMPTY_FORM);
+            setFieldErrors(EMPTY_FIELD_ERRORS);
             setSuccess("Tournament created successfully.");
         } catch (createError) {
             const message = getErrorMessage(createError);
             setError(message);
+            setFieldErrors(getFieldErrorsFromMessage(message));
             showError("Tournament creation failed", message);
         } finally {
             setIsSubmitting(false);
@@ -150,8 +267,8 @@ export default function OrganizerTournamentCreation() {
                         required
                         fullWidth
                         autoComplete="off"
-                        error={Boolean(error) && !form.title.trim()}
-                        helperText={!form.title.trim() ? "Required" : " "}
+                        error={Boolean(fieldErrors.title)}
+                        helperText={fieldErrors.title || " "}
                     />
 
                     <TextField
@@ -171,6 +288,8 @@ export default function OrganizerTournamentCreation() {
                             onChange={event => updateField("startDate", event.target.value)}
                             fullWidth
                             InputLabelProps={{shrink: true}}
+                            error={Boolean(fieldErrors.startDate)}
+                            helperText={fieldErrors.startDate || " "}
                         />
                         <TextField
                             label="End date"
@@ -179,6 +298,8 @@ export default function OrganizerTournamentCreation() {
                             onChange={event => updateField("endDate", event.target.value)}
                             fullWidth
                             InputLabelProps={{shrink: true}}
+                            error={Boolean(fieldErrors.endDate)}
+                            helperText={fieldErrors.endDate || " "}
                         />
                     </Stack>
 

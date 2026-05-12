@@ -36,10 +36,10 @@ export default function AuthenticatedLayout({user, activeItem, onNavigate, onLog
         <Stack sx={{height: "100%"}}>
             <Box sx={{p: 2}}>
                 <Typography variant="h6" component="div" sx={{fontWeight: 800}}>
-                    SFLU
+                    SFLU by 46 team
                 </Typography>
                 <Typography variant="body2" sx={{color: "text.secondary"}}>
-                    Authenticated app
+                    Tournament organization system
                 </Typography>
             </Box>
             <Divider/>

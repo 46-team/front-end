@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react';
-import { Card, CardContent, Typography, TextField, Button, useMediaQuery, Stack } from '@mui/material';
+import { Typography, TextField, Button, useMediaQuery, Stack } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import {requestWS} from "../../api/wsClient";
 import {storeAuthData} from "./authStorage";
 import CenteredPage from "../../ui/CenteredPage";
+import CenteredCard from "../../ui/CenteredCard";
 import {cardEntranceVariants, staggeredItemVariants} from "../../ui/animations";
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -290,17 +291,7 @@ export default function Login({setPage}) {
                     variants={cardEntranceVariants}
                     style={{ display: 'flex', justifyContent: 'center', width: '100%' }}
                 >
-                    <Card
-                        sx={{
-                            maxWidth: 450,
-                            width: '100%',
-                            textAlign: 'center',
-                            p: isMobile ? 2 : 4,
-                            boxShadow: 6,
-                            mx: 2,
-                        }}
-                    >
-                        <CardContent>
+                    <CenteredCard maxWidth={450}>
                             <motion.div custom={1} variants={staggeredItemVariants}>
                                 {isRegister
                                     ? <PersonAddAlt1Icon sx={{ fontSize: isMobile ? 54 : 72, color: 'primary.main' }} />
@@ -417,15 +408,14 @@ export default function Login({setPage}) {
                                     <Button
                                         variant="text"
                                         disabled={isSubmitting}
-                                        sx={{ textTransform: 'none', minWidth: 'auto', px: 1 }}
+                                        sx={{ minWidth: 'auto', px: 1 }}
                                         onClick={() => switchMode(isRegister ? "login" : "register")}
                                     >
                                         {isRegister ? "Sign in" : "Register"}
                                     </Button>
                                 </Stack>
                             </motion.div>
-                        </CardContent>
-                    </Card>
+                    </CenteredCard>
                 </motion.div>
         </CenteredPage>
     );

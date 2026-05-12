@@ -33,7 +33,32 @@ export default function AuthenticatedLayout({user, activeItem, onNavigate, onLog
     }
 
     const drawerContent = (
-        <Stack sx={{height: "100%"}}>
+        <Stack
+            sx={{
+                height: "100%",
+                color: "primary.contrastText",
+                "& .MuiTypography-root": {
+                    color: "inherit",
+                },
+                "& .MuiTypography-colorTextSecondary": {
+                    color: "rgba(255, 255, 255, 0.82)",
+                },
+                "& .MuiListItemIcon-root": {
+                    color: "inherit",
+                },
+                "& .MuiDivider-root": {
+                    borderColor: "rgba(255, 255, 255, 0.28)",
+                },
+                "& .MuiAvatar-root": {
+                    bgcolor: "rgba(255, 255, 255, 0.18)",
+                    color: "inherit",
+                },
+                "& .MuiChip-root": {
+                    bgcolor: "rgba(255, 255, 255, 0.18)",
+                    color: "inherit",
+                },
+            }}
+        >
             <Box sx={{p: 2}}>
                 <Typography variant="h6" component="div" sx={{fontWeight: 800}}>
                     SFLU by 46 team
@@ -44,12 +69,13 @@ export default function AuthenticatedLayout({user, activeItem, onNavigate, onLog
             </Box>
             <Divider/>
             <Box sx={{p: 2}}>
-                <UserSummary user={normalizedUser}/>
+                <UserSummary user={normalizedUser} inverse/>
             </Box>
             <RoleNavigation
                 role={normalizedUser.role}
                 activeItem={activeItem}
                 onNavigate={handleNavigate}
+                inverse
             />
             <Box sx={{flexGrow: 1}}/>
             <Box sx={{p: 2}}>
@@ -59,7 +85,7 @@ export default function AuthenticatedLayout({user, activeItem, onNavigate, onLog
                     color="inherit"
                     startIcon={<LogoutIcon/>}
                     onClick={onLogout}
-                    sx={{justifyContent: "flex-start", textTransform: "none"}}
+                    sx={{justifyContent: "flex-start"}}
                 >
                     Logout
                 </Button>
@@ -98,7 +124,7 @@ export default function AuthenticatedLayout({user, activeItem, onNavigate, onLog
                         <Chip
                             label={normalizedUser.roleLabel}
                             size="small"
-                            sx={{display: {xs: "inline-flex", md: "none"}, mt: 0.5, borderRadius: 1}}
+                            sx={{display: {xs: "inline-flex", md: "none"}, mt: 0.5}}
                         />
                     </Box>
                     <Box sx={{display: {xs: "none", sm: "block"}, maxWidth: 280}}>
@@ -122,7 +148,10 @@ export default function AuthenticatedLayout({user, activeItem, onNavigate, onLog
                     ModalProps={{keepMounted: true}}
                     sx={{
                         display: {xs: "block", md: "none"},
-                        "& .MuiDrawer-paper": {width: DRAWER_WIDTH},
+                        "& .MuiDrawer-paper": {
+                            width: DRAWER_WIDTH,
+                            backgroundImage: theme.palette.brand.gradient,
+                        },
                     }}
                 >
                     {drawerContent}
@@ -132,7 +161,11 @@ export default function AuthenticatedLayout({user, activeItem, onNavigate, onLog
                     open
                     sx={{
                         display: {xs: "none", md: "block"},
-                        "& .MuiDrawer-paper": {width: DRAWER_WIDTH, boxSizing: "border-box"},
+                        "& .MuiDrawer-paper": {
+                            width: DRAWER_WIDTH,
+                            boxSizing: "border-box",
+                            backgroundImage: theme.palette.brand.gradient,
+                        },
                     }}
                 >
                     {drawerContent}

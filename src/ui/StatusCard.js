@@ -1,5 +1,6 @@
-import {Button, Card, CardContent, Typography, useMediaQuery} from "@mui/material";
+import {Button, Typography, useMediaQuery} from "@mui/material";
 import {useTheme} from "@mui/material/styles";
+import CenteredCard from "./CenteredCard";
 
 export default function StatusCard({
     icon,
@@ -31,29 +32,18 @@ export default function StatusCard({
     );
 
     return (
-        <Card
-            sx={{
-                maxWidth,
-                width: "100%",
-                textAlign: "center",
-                p: isMobile ? 3 : 5,
-                boxShadow: 6,
-                mx: 2,
-            }}
-        >
-            <CardContent>
-                {icon}
-                <Typography variant={isMobile ? "h3" : "h1"} component="h1" sx={{mt: 2, fontWeight: "bold"}}>
-                    {code}
-                </Typography>
-                <Typography variant={isMobile ? "h5" : "h4"} sx={{mt: 1, color: "text.secondary"}}>
-                    {title}
-                </Typography>
-                <Typography sx={{mt: 2, mb: 4, color: "text.secondary"}}>
-                    {description}
-                </Typography>
-                {actionComponent ? actionComponent(action) : action}
-            </CardContent>
-        </Card>
+        <CenteredCard maxWidth={maxWidth} sx={{p: isMobile ? 3 : 5}}>
+            {icon}
+            <Typography variant={isMobile ? "h3" : "h1"} component="h1" sx={{mt: 2}}>
+                {code}
+            </Typography>
+            <Typography variant={isMobile ? "h5" : "h4"} sx={{mt: 1, color: "text.secondary"}}>
+                {title}
+            </Typography>
+            <Typography sx={{mt: 2, mb: 4, color: "text.secondary"}}>
+                {description}
+            </Typography>
+            {actionComponent ? actionComponent(action) : action}
+        </CenteredCard>
     );
 }

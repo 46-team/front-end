@@ -9,7 +9,6 @@ import {
     CircularProgress,
     Divider,
     MenuItem,
-    Paper,
     Stack,
     TextField,
     Typography,
@@ -21,6 +20,7 @@ import SaveIcon from "@mui/icons-material/Save";
 import SearchIcon from "@mui/icons-material/Search";
 import {requestWS} from "../../api/wsClient";
 import {formatDate, formatDateTime, getTournamentErrorMessage, isAuthError} from "./tournamentFormatters";
+import AppSurface from "../../ui/AppSurface";
 
 const TOURNAMENT_STATUSES = ["Draft", "Registration", "Running", "Finished"];
 
@@ -267,10 +267,10 @@ function TeamTournamentSubmission({tournament, currentUser, onReload, onAuthErro
     }
 
     return (
-        <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
+        <AppSurface>
             <Stack spacing={2}>
                 <Box>
-                    <Typography variant="h6" component="h2" sx={{fontWeight: 800}}>
+                    <Typography variant="subtitle1" component="h2">
                         Submission
                     </Typography>
                     <Typography variant="body2" sx={{mt: 0.5, color: "text.secondary"}}>
@@ -286,7 +286,7 @@ function TeamTournamentSubmission({tournament, currentUser, onReload, onAuthErro
                     <Button
                         variant={isFormOpen ? "outlined" : "contained"}
                         onClick={() => setIsFormOpen(previous => !previous)}
-                        sx={{textTransform: "none", alignSelf: "flex-start"}}
+                        sx={{alignSelf: "flex-start"}}
                     >
                         {isFormOpen ? "Hide submission form" : (currentSubmission ? "Edit submission" : "Open submission form")}
                     </Button>
@@ -357,7 +357,7 @@ function TeamTournamentSubmission({tournament, currentUser, onReload, onAuthErro
                                 variant="contained"
                                 startIcon={isSubmitting ? <CircularProgress color="inherit" size={18}/> : <SaveIcon/>}
                                 disabled={isSubmitting}
-                                sx={{textTransform: "none", minWidth: 180}}
+                                sx={{minWidth: 180}}
                             >
                                 {currentSubmission ? "Update submission" : "Submit project"}
                             </Button>
@@ -368,7 +368,7 @@ function TeamTournamentSubmission({tournament, currentUser, onReload, onAuthErro
                     </Stack>
                 )}
             </Stack>
-        </Paper>
+        </AppSurface>
     );
 }
 
@@ -453,10 +453,10 @@ function TournamentParticipantAssignment({tournament, onAssigned, onAuthError}) 
     }
 
     return (
-        <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
+        <AppSurface>
             <Stack spacing={2} component="form" onSubmit={handleSubmit}>
                 <Box>
-                    <Typography variant="h6" component="h2" sx={{fontWeight: 800}}>
+                    <Typography variant="subtitle1" component="h2">
                         Assign participants
                     </Typography>
                     <Typography variant="body2" sx={{mt: 0.5, color: "text.secondary"}}>
@@ -495,7 +495,7 @@ function TournamentParticipantAssignment({tournament, onAssigned, onAuthError}) 
                         startIcon={isLoadingUsers ? <CircularProgress color="inherit" size={18}/> : <SearchIcon/>}
                         disabled={isLoadingUsers}
                         onClick={handleSearchSubmit}
-                        sx={{textTransform: "none", minWidth: 120}}
+                        sx={{minWidth: 120}}
                     >
                         Search
                     </Button>
@@ -554,13 +554,13 @@ function TournamentParticipantAssignment({tournament, onAssigned, onAuthError}) 
                         variant="contained"
                         startIcon={isSubmitting ? <CircularProgress color="inherit" size={18}/> : <SaveIcon/>}
                         disabled={isSubmitting}
-                        sx={{textTransform: "none", minWidth: 190}}
+                        sx={{minWidth: 190}}
                     >
                         Save participants
                     </Button>
                 </Box>
             </Stack>
-        </Paper>
+        </AppSurface>
     );
 }
 
@@ -639,24 +639,23 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
 
     if (isLoading) {
         return (
-            <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
+            <AppSurface>
                 <Stack direction="row" spacing={1.5} alignItems="center">
                     <CircularProgress size={22}/>
                     <Typography>Loading tournament details...</Typography>
                 </Stack>
-            </Paper>
+            </AppSurface>
         );
     }
 
     if (error) {
         return (
-            <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
+            <AppSurface>
                 <Stack spacing={2} alignItems="flex-start">
                     <Button
                         variant="text"
                         startIcon={<ArrowBackIcon/>}
                         onClick={() => navigate("/tournaments")}
-                        sx={{textTransform: "none"}}
                     >
                         Back to tournaments
                     </Button>
@@ -667,12 +666,11 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
                         variant="outlined"
                         startIcon={<RefreshIcon/>}
                         onClick={loadTournament}
-                        sx={{textTransform: "none"}}
                     >
                         Try again
                     </Button>
                 </Stack>
-            </Paper>
+            </AppSurface>
         );
     }
 
@@ -692,19 +690,19 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
 
     return (
         <Stack spacing={2}>
-            <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
+            <AppSurface>
                 <Stack spacing={2}>
                     <Box>
                         <Button
                             variant="text"
                             startIcon={<ArrowBackIcon/>}
                             onClick={() => navigate("/tournaments")}
-                            sx={{textTransform: "none", mb: 1}}
+                            sx={{mb: 1}}
                         >
                             Back to tournaments
                         </Button>
                         <Stack direction={{xs: "column", sm: "row"}} spacing={1.5} alignItems={{xs: "flex-start", sm: "center"}}>
-                            <Typography variant="h5" component="h2" sx={{fontWeight: 800, wordBreak: "break-word"}}>
+                            <Typography variant="h5" component="h2" sx={{wordBreak: "break-word"}}>
                                 {tournament.title}
                             </Typography>
                             {canManageStatus ? (
@@ -727,7 +725,7 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
                                     {isStatusSubmitting && <CircularProgress size={20}/>}
                                 </Stack>
                             ) : (
-                                <Chip label={currentStatus} size="small" sx={{borderRadius: 1}}/>
+                                <Chip label={currentStatus} size="small"/>
                             )}
                         </Stack>
                         {tournament.description && (
@@ -758,7 +756,7 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
                         <DetailRow label="Created" value={formatDateTime(tournament.created_at)}/>
                     </Stack>
                 </Stack>
-            </Paper>
+            </AppSurface>
 
             <TeamTournamentSubmission
                 tournament={tournament}
@@ -767,14 +765,14 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
                 onAuthError={onAuthError}
             />
 
-            <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
+            <AppSurface>
                 <Stack spacing={2}>
                     <Stack direction="row" spacing={1} alignItems="center">
                         <GroupsIcon color="action"/>
-                        <Typography variant="h6" component="h2" sx={{fontWeight: 800}}>
+                        <Typography variant="subtitle1" component="h2">
                             Participants
                         </Typography>
-                        <Chip label={participants.length} size="small" sx={{borderRadius: 1}}/>
+                        <Chip label={participants.length} size="small"/>
                     </Stack>
 
                     {participants.length === 0 ? (
@@ -800,14 +798,14 @@ export default function TournamentDetailView({tournamentId: tournamentIdProp, cu
                                     <Chip
                                         label={participant.role || "participant"}
                                         size="small"
-                                        sx={{borderRadius: 1, justifySelf: {xs: "start", sm: "end"}}}
+                                        sx={{justifySelf: {xs: "start", sm: "end"}}}
                                     />
                                 </Box>
                             ))}
                         </Stack>
                     )}
                 </Stack>
-            </Paper>
+            </AppSurface>
 
             {canManageParticipants && (
                 <TournamentParticipantAssignment

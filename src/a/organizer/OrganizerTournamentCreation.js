@@ -6,7 +6,6 @@ import {
     Button,
     CircularProgress,
     Divider,
-    Paper,
     Stack,
     TextField,
     Typography,
@@ -16,6 +15,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import {requestWS} from "../../api/wsClient";
 import {getDeviceToken} from "../auth/authStorage";
 import {showError} from "../../utils/Modal";
+import AppSurface from "../../ui/AppSurface";
 
 const EMPTY_FORM = {
     title: "",
@@ -237,10 +237,10 @@ export default function OrganizerTournamentCreation() {
 
     return (
         <Stack spacing={2}>
-            <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
+            <AppSurface>
                 <Stack spacing={2} component="form" onSubmit={handleSubmit}>
                     <Box>
-                        <Typography variant="h5" component="h2" sx={{fontWeight: 800}}>
+                        <Typography variant="subtitle1" component="h2">
                             Create tournament
                         </Typography>
                         <Typography variant="body2" sx={{mt: 0.5, color: "text.secondary"}}>
@@ -309,17 +309,17 @@ export default function OrganizerTournamentCreation() {
                             variant="contained"
                             startIcon={isSubmitting ? <CircularProgress color="inherit" size={18}/> : <AddIcon/>}
                             disabled={isSubmitting}
-                            sx={{textTransform: "none", minWidth: 180}}
+                            sx={{minWidth: 180}}
                         >
                             Create tournament
                         </Button>
                     </Box>
                 </Stack>
-            </Paper>
+            </AppSurface>
 
             {createdTournaments.length > 0 && (
-                <Paper sx={{p: {xs: 2, sm: 3}, borderRadius: 1}}>
-                    <Typography variant="h6" component="h2" sx={{fontWeight: 800}}>
+                <AppSurface>
+                    <Typography variant="subtitle1" component="h2">
                         Created tournaments
                     </Typography>
                     <Stack divider={<Divider flexItem/>} spacing={2} sx={{mt: 2}}>
@@ -353,7 +353,6 @@ export default function OrganizerTournamentCreation() {
                                         startIcon={<VisibilityIcon/>}
                                         onClick={() => navigate(`/tournaments/${tournament._id}`)}
                                         sx={{
-                                            textTransform: "none",
                                             justifySelf: {xs: "start", sm: "end"},
                                             minWidth: 130,
                                         }}
@@ -364,7 +363,7 @@ export default function OrganizerTournamentCreation() {
                             </Box>
                         ))}
                     </Stack>
-                </Paper>
+                </AppSurface>
             )}
         </Stack>
     );

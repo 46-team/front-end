@@ -10,13 +10,14 @@ import {
 import {getNavigationForRole} from "./appNavigation";
 import {normalizeRole} from "./userUtils";
 
-export default function RoleNavigation({role, activeItem, onNavigate}) {
+export default function RoleNavigation({role, activeItem, onNavigate, inverse = false}) {
     const normalizedRole = normalizeRole(role);
     const items = getNavigationForRole(normalizedRole);
+    const overlineColor = inverse ? "rgba(255, 255, 255, 0.82)" : "text.secondary";
 
     return (
         <Box>
-            <Typography variant="overline" sx={{px: 2, color: "text.secondary", fontWeight: 700}}>
+            <Typography variant="overline" sx={{px: 2, color: overlineColor, fontWeight: 700}}>
                 Navigation
             </Typography>
             <List sx={{pt: 0.5}}>
@@ -29,7 +30,7 @@ export default function RoleNavigation({role, activeItem, onNavigate}) {
                             key={item.id}
                             selected={isSelected}
                             onClick={() => onNavigate(item.id)}
-                            sx={{mx: 1, borderRadius: 1}}
+                            sx={{mx: 1}}
                         >
                             <ListItemIcon sx={{minWidth: 38}}>
                                 <Icon fontSize="small"/>

@@ -12,7 +12,7 @@ const listeners = {};
 const queues = {};
 
 let keyPair = null;
-const url = process.env.REACT_APP_WS_URL || "wss://pluto.sflu.itclub.best:7774/apiws"
+const url = process.env.REACT_APP_WS_URL || "wss://pluto.sflu.itclub.best:8000/apiws"
 export let key = null;
 
 export function pushMessage(msg) {

@@ -24,7 +24,7 @@ export async function generateECDHKeyPair() {
     }
 }
 
-async function importPemPublicKey(pem) {
+export async function importPemPublicKey(pem) {
     const pemContents = pem
         .replace("-----BEGIN PUBLIC KEY-----", "")
         .replace("-----END PUBLIC KEY-----", "")

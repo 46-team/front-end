@@ -1,19 +1,19 @@
 {
-  "short_name": "NAME",
-  "name": "NAME",
+  "short_name": "SFLU",
+  "name": "SFLU by 46 team",
   "icons": [
     {
-      "src": "xxx.ico",
+      "src": "NOFILE.ico",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
     },
     {
-      "src": "xxxx.gif",
+      "src": "NOFILE.gif",
       "type": "image/gif",
       "sizes": "192x192"
     },
     {
-      "src": "xxxx.gif",
+      "src": "NOFILE.gif",
       "type": "image/gif",
       "sizes": "512x512"
     }
